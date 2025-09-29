@@ -1,3 +1,4 @@
+// src/components/Layout/Layout.jsx
 import { useContext } from 'react';
 import { Link, Outlet, useLocation } from 'react-router-dom';
 import { AuthContext } from '../../context/AuthContext';
@@ -8,6 +9,7 @@ const Layout = () => {
 
   const navLinks = [
     { path: '/', label: 'Home' },
+    { path: '/products', label: 'Products' },  // ADD THIS LINE
   ];
 
   return (

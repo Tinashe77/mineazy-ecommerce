@@ -11,5 +11,16 @@ export default defineConfig({
   },
   esbuild: {
     target: 'es2020' // This enables optional chaining
+  },
+  server: {
+    port: 5173,
+    proxy: {
+      '/api': {
+        target: 'https://mining-equipment-backend.onrender.com',
+        changeOrigin: true,
+        secure: false,
+      }
+    }
   }
+  
 });

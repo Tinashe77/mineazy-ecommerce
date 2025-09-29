@@ -1,4 +1,12 @@
-const API_URL = `${import.meta.env.VITE_API_URL}/api/products`;
+// src/services/products.js
+const API_BASE_URL = import.meta.env.MODE === 'production' 
+  ? 'https://mining-equipment-backend.onrender.com' 
+  : ''; // Empty string means use relative path (will be proxied)
+
+
+const API_URL = `${API_BASE_URL}/api/products`;
+const SEARCH_URL = `${API_BASE_URL}/api/search`;
+
 
 export const getProducts = async (token, page = 1, limit = 10) => {
   const response = await fetch(`${API_URL}?page=${page}&limit=${limit}`, {
@@ -48,4 +56,18 @@ export const deleteProduct = async (token, id) => {
     },
   });
   return response.json();
+};
+
+export const getSearchSuggestions = async (query) => {
+  try {
+    const response = await fetch(`${SEARCH_URL}/suggestions?q=${encodeURIComponent(query)}`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+    return await handleResponse(response);
+  } catch (error) {
+    return { success: false, message: error.message };
+  }
 };
