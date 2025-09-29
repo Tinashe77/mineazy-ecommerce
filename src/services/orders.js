@@ -1,9 +1,10 @@
-// src/services/categories.js
+// src/services/orders.js
 const API_BASE_URL = import.meta.env.MODE === 'production' 
   ? 'https://mining-equipment-backend.onrender.com' 
   : '';
 
-const API_URL = `${API_BASE_URL}/api/categories`;
+const API_URL = `${API_BASE_URL}/api/orders`;
+const ADMIN_URL = `${API_BASE_URL}/api/admin/orders`;
 
 const handleResponse = async (response) => {
   const data = await response.json();
@@ -15,13 +16,36 @@ const handleResponse = async (response) => {
   return data;
 };
 
-// Public endpoint - Get all categories
-export const getCategories = async (params = {}) => {
+// Public/User endpoints - Create order
+export const createOrder = async (orderData, token = null) => {
+  try {
+    const headers = {
+      'Content-Type': 'application/json',
+    };
+    
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+    
+    const response = await fetch(API_URL, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify(orderData),
+    });
+    return await handleResponse(response);
+  } catch (error) {
+    return { success: false, message: error.message };
+  }
+};
+
+// User endpoints - Get user's orders
+export const getUserOrders = async (token, params = {}) => {
   try {
     const queryString = new URLSearchParams(params).toString();
     const response = await fetch(`${API_URL}${queryString ? `?${queryString}` : ''}`, {
       method: 'GET',
       headers: {
+        'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json',
       },
     });
@@ -31,12 +55,13 @@ export const getCategories = async (params = {}) => {
   }
 };
 
-// Public endpoint - Get single category by ID
-export const getCategoryById = async (id) => {
+// Get single order
+export const getOrderById = async (token, id) => {
   try {
     const response = await fetch(`${API_URL}/${id}`, {
       method: 'GET',
       headers: {
+        'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json',
       },
     });
@@ -46,11 +71,10 @@ export const getCategoryById = async (id) => {
   }
 };
 
-// Public endpoint - Get category by slug with products
-export const getCategoryBySlug = async (slug, params = {}) => {
+// Track order (for guests)
+export const trackOrder = async (orderNumber, email) => {
   try {
-    const queryString = new URLSearchParams(params).toString();
-    const response = await fetch(`${API_URL}/slug/${slug}${queryString ? `?${queryString}` : ''}`, {
+    const response = await fetch(`${API_URL}/track/${orderNumber}/${email}`, {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
@@ -62,55 +86,8 @@ export const getCategoryBySlug = async (slug, params = {}) => {
   }
 };
 
-// Public endpoint - Get category tree structure
-export const getCategoryTree = async () => {
-  try {
-    const response = await fetch(`${API_URL}/tree`, {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-    });
-    return await handleResponse(response);
-  } catch (error) {
-    return { success: false, message: error.message };
-  }
-};
-
-// Protected endpoint - Create new category (Inventory Manager/Super Admin)
-export const createCategory = async (token, categoryData) => {
-  try {
-    const response = await fetch(API_URL, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-      },
-      body: categoryData, // FormData
-    });
-    return await handleResponse(response);
-  } catch (error) {
-    return { success: false, message: error.message };
-  }
-};
-
-// Protected endpoint - Update category (Inventory Manager/Super Admin)
-export const updateCategory = async (token, id, categoryData) => {
-  try {
-    const response = await fetch(`${API_URL}/${id}`, {
-      method: 'PUT',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-      },
-      body: categoryData, // FormData
-    });
-    return await handleResponse(response);
-  } catch (error) {
-    return { success: false, message: error.message };
-  }
-};
-
-// Protected endpoint - Delete category (Inventory Manager/Super Admin)
-export const deleteCategory = async (token, id) => {
+// Cancel order
+export const cancelOrder = async (token, id) => {
   try {
     const response = await fetch(`${API_URL}/${id}`, {
       method: 'DELETE',
@@ -118,6 +95,40 @@ export const deleteCategory = async (token, id) => {
         'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json',
       },
+    });
+    return await handleResponse(response);
+  } catch (error) {
+    return { success: false, message: error.message };
+  }
+};
+
+// Admin endpoints - Get all orders with filters
+export const getAdminOrders = async (token, params = {}) => {
+  try {
+    const queryString = new URLSearchParams(params).toString();
+    const response = await fetch(`${ADMIN_URL}${queryString ? `?${queryString}` : ''}`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+    });
+    return await handleResponse(response);
+  } catch (error) {
+    return { success: false, message: error.message };
+  }
+};
+
+// Admin - Update order status
+export const updateOrderStatus = async (token, id, updateData) => {
+  try {
+    const response = await fetch(`${API_URL}/${id}`, {
+      method: 'PUT',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(updateData),
     });
     return await handleResponse(response);
   } catch (error) {

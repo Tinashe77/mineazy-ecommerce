@@ -1,9 +1,9 @@
-// src/services/categories.js
+// src/services/users.js
 const API_BASE_URL = import.meta.env.MODE === 'production' 
   ? 'https://mining-equipment-backend.onrender.com' 
   : '';
 
-const API_URL = `${API_BASE_URL}/api/categories`;
+const API_URL = `${API_BASE_URL}/api/users`;
 
 const handleResponse = async (response) => {
   const data = await response.json();
@@ -15,13 +15,14 @@ const handleResponse = async (response) => {
   return data;
 };
 
-// Public endpoint - Get all categories
-export const getCategories = async (params = {}) => {
+// Get all users (Admin only)
+export const getAllUsers = async (token, params = {}) => {
   try {
     const queryString = new URLSearchParams(params).toString();
     const response = await fetch(`${API_URL}${queryString ? `?${queryString}` : ''}`, {
       method: 'GET',
       headers: {
+        'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json',
       },
     });
@@ -31,61 +32,15 @@ export const getCategories = async (params = {}) => {
   }
 };
 
-// Public endpoint - Get single category by ID
-export const getCategoryById = async (id) => {
+// Get single user by ID (Admin only)
+export const getUserById = async (token, id) => {
   try {
     const response = await fetch(`${API_URL}/${id}`, {
       method: 'GET',
       headers: {
-        'Content-Type': 'application/json',
-      },
-    });
-    return await handleResponse(response);
-  } catch (error) {
-    return { success: false, message: error.message };
-  }
-};
-
-// Public endpoint - Get category by slug with products
-export const getCategoryBySlug = async (slug, params = {}) => {
-  try {
-    const queryString = new URLSearchParams(params).toString();
-    const response = await fetch(`${API_URL}/slug/${slug}${queryString ? `?${queryString}` : ''}`, {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-    });
-    return await handleResponse(response);
-  } catch (error) {
-    return { success: false, message: error.message };
-  }
-};
-
-// Public endpoint - Get category tree structure
-export const getCategoryTree = async () => {
-  try {
-    const response = await fetch(`${API_URL}/tree`, {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-    });
-    return await handleResponse(response);
-  } catch (error) {
-    return { success: false, message: error.message };
-  }
-};
-
-// Protected endpoint - Create new category (Inventory Manager/Super Admin)
-export const createCategory = async (token, categoryData) => {
-  try {
-    const response = await fetch(API_URL, {
-      method: 'POST',
-      headers: {
         'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
       },
-      body: categoryData, // FormData
     });
     return await handleResponse(response);
   } catch (error) {
@@ -93,15 +48,16 @@ export const createCategory = async (token, categoryData) => {
   }
 };
 
-// Protected endpoint - Update category (Inventory Manager/Super Admin)
-export const updateCategory = async (token, id, categoryData) => {
+// Update user (Admin only)
+export const updateUser = async (token, id, userData) => {
   try {
     const response = await fetch(`${API_URL}/${id}`, {
       method: 'PUT',
       headers: {
         'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
       },
-      body: categoryData, // FormData
+      body: JSON.stringify(userData),
     });
     return await handleResponse(response);
   } catch (error) {
@@ -109,11 +65,43 @@ export const updateCategory = async (token, id, categoryData) => {
   }
 };
 
-// Protected endpoint - Delete category (Inventory Manager/Super Admin)
-export const deleteCategory = async (token, id) => {
+// Delete user (Admin only)
+export const deleteUser = async (token, id) => {
   try {
     const response = await fetch(`${API_URL}/${id}`, {
       method: 'DELETE',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+    });
+    return await handleResponse(response);
+  } catch (error) {
+    return { success: false, message: error.message };
+  }
+};
+
+// Toggle user status (Admin only)
+export const toggleUserStatus = async (token, id) => {
+  try {
+    const response = await fetch(`${API_URL}/${id}/toggle-status`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+    });
+    return await handleResponse(response);
+  } catch (error) {
+    return { success: false, message: error.message };
+  }
+};
+
+// Get user statistics (Admin only)
+export const getUserStats = async (token) => {
+  try {
+    const response = await fetch(`${API_URL}/stats/overview`, {
+      method: 'GET',
       headers: {
         'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json',

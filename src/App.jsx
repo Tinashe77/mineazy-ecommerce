@@ -8,6 +8,13 @@ import DashboardLayout from './components/dashboard/DashboardLayout';
 import DashboardHome from './components/dashboard/DashboardHome';
 import ProductsPage from './components/dashboard/ProductsPage';
 import ProductForm from './components/dashboard/ProductForm';
+import CategoriesPage from './components/dashboard/CategoriesPage';
+import CategoryForm from './components/dashboard/CategoryForm';
+import OrdersPage from './components/dashboard/OrdersPage';
+import OrderDetailPage from './components/dashboard/OrderDetailPage';
+import UsersPage from './components/dashboard/UsersPage';
+import UserDetailPage from './components/dashboard/UserDetailPage';
+import InvoicesPage from './components/dashboard/InvoicesPage';
 
 const App = () => {
   return (
@@ -29,6 +36,14 @@ const App = () => {
         <Route path="products" element={<ProductsPage />} />
         <Route path="products/new" element={<ProductForm />} />
         <Route path="products/edit/:id" element={<ProductForm />} />
+        <Route path="categories" element={<CategoriesPage />} />
+        <Route path="categories/new" element={<CategoryForm />} />
+        <Route path="categories/edit/:id" element={<CategoryForm />} />
+        <Route path="orders" element={<OrdersPage />} />
+        <Route path="orders/:id" element={<OrderDetailPage />} />
+        <Route path="users" element={<UsersPage />} />
+        <Route path="users/:id" element={<UserDetailPage />} />
+        <Route path="invoices" element={<InvoicesPage />} />
       </Route>
 
       <Route path="*" element={<Navigate to="/login" />} />

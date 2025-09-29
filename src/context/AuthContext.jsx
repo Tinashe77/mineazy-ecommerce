@@ -14,40 +14,65 @@ export const AuthContext = createContext();
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [token, setToken] = useState(localStorage.getItem('token'));
+  const [loading, setLoading] = useState(true);
 
   const refreshUser = async () => {
-    if (token) {
-      const response = await getProfile(token);
-      if (response.id) {
-        setUser(response);
-      } else {
+    const storedToken = localStorage.getItem('token');
+    
+    if (storedToken) {
+      setLoading(true);
+      try {
+        const response = await getProfile(storedToken);
+        if (response && response.id) {
+          setUser(response);
+          setToken(storedToken);
+        } else {
+          // Invalid token or user not found
+          logout();
+        }
+      } catch (error) {
+        console.error('Failed to refresh user:', error);
         logout();
+      } finally {
+        setLoading(false);
       }
+    } else {
+      setLoading(false);
     }
   };
 
   useEffect(() => {
     refreshUser();
-  }, [token]);
+  }, []); // Only run once on mount
 
   const login = async (credentials) => {
-    const response = await loginService(credentials);
-    if (response.token) {
-      setToken(response.token);
-      setUser(response.user);
-      localStorage.setItem('token', response.token);
+    try {
+      const response = await loginService(credentials);
+      if (response.token) {
+        localStorage.setItem('token', response.token);
+        setToken(response.token);
+        setUser(response.user);
+      }
+      return response;
+    } catch (error) {
+      console.error('Login error:', error);
+      return { success: false, message: error.message };
     }
-    return response;
   };
 
   const register = async (userData) => {
-    const response = await registerService(userData);
-    if (response.token) {
-      setToken(response.token);
-      setUser(response.user);
-      localStorage.setItem('token', response.token);
+    try {
+      const response = await registerService(userData);
+      if (response.token) {
+        localStorage.setItem('token', response.token);
+        setToken(response.token);
+        setUser(response.user);
+      }
+      return response;
+    } catch (error) {
+      console.error('Register error:', error);
+      return { success: false, message: error.message };
     }
-    return response;
   };
 
   const logout = () => {
@@ -77,6 +102,7 @@ export const AuthProvider = ({ children }) => {
       value={{
         user,
         token,
+        loading,
         login,
         logout,
         register,

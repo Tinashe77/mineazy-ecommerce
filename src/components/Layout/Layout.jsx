@@ -9,7 +9,7 @@ const Layout = () => {
 
   const navLinks = [
     { path: '/', label: 'Home' },
-    { path: '/products', label: 'Products' },  // ADD THIS LINE
+    { path: '/products', label: 'Products' },  
   ];
 
   return (
