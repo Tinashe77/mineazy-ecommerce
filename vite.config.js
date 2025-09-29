@@ -6,11 +6,11 @@ export default defineConfig({
   plugins: [react()],
   resolve: {
     alias: {
-      '@': path.resolve(__dirname, 'src'),
+      '@': path.resolve(__dirname, 'src'), // Ensure this points to your `src` directory
     },
   },
   esbuild: {
-    target: 'es2020'
+    target: 'es2020' // This enables optional chaining
   },
   server: {
     port: 5173,
@@ -22,4 +22,5 @@ export default defineConfig({
       }
     }
   }
+  
 });
