@@ -15,6 +15,9 @@ import OrderDetailPage from './components/dashboard/OrderDetailPage';
 import UsersPage from './components/dashboard/UsersPage';
 import UserDetailPage from './components/dashboard/UserDetailPage';
 import InvoicesPage from './components/dashboard/InvoicesPage';
+import BlogPage from './components/dashboard/BlogPage';
+import BlogPostForm from './components/dashboard/BlogPostForm';
+import BlogCategoriesPage from './components/dashboard/BlogCategoriesPage';
 
 const App = () => {
   return (
@@ -44,6 +47,10 @@ const App = () => {
         <Route path="users" element={<UsersPage />} />
         <Route path="users/:id" element={<UserDetailPage />} />
         <Route path="invoices" element={<InvoicesPage />} />
+        <Route path="blog" element={<BlogPage />} />
+        <Route path="blog/new" element={<BlogPostForm />} />
+        <Route path="blog/edit/:id" element={<BlogPostForm />} />
+        <Route path="blog/categories" element={<BlogCategoriesPage />} />
       </Route>
 
       <Route path="*" element={<Navigate to="/login" />} />
