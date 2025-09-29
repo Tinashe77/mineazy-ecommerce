@@ -1,85 +1,51 @@
-// src/services/products.js
-const API_URL = '/api/products';
+const API_URL = `${import.meta.env.VITE_API_URL}/api/products`;
 
-const handleResponse = async (response) => {
-  const data = await response.json();
-  
-  if (!response.ok) {
-    throw new Error(data.message || 'An error occurred');
-  }
-  
-  return data;
+export const getProducts = async (token, page = 1, limit = 10) => {
+  const response = await fetch(`${API_URL}?page=${page}&limit=${limit}`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+  return response.json();
 };
 
-export const getProducts = async (params = {}) => {
-  try {
-    const queryString = new URLSearchParams(params).toString();
-    const response = await fetch(`${API_URL}${queryString ? `?${queryString}` : ''}`, {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-    });
-    return await handleResponse(response);
-  } catch (error) {
-    return { success: false, message: error.message };
-  }
+export const getProductById = async (token, id) => {
+  const response = await fetch(`${API_URL}/${id}`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+  return response.json();
 };
 
-export const getProductById = async (id) => {
-  try {
-    const response = await fetch(`${API_URL}/${id}`, {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-    });
-    return await handleResponse(response);
-  } catch (error) {
-    return { success: false, message: error.message };
-  }
+export const createProduct = async (token, productData) => {
+  const response = await fetch(API_URL, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+    body: productData, // FormData
+  });
+  return response.json();
 };
 
-export const getRelatedProducts = async (id) => {
-  try {
-    const response = await fetch(`${API_URL}/${id}/related`, {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-    });
-    return await handleResponse(response);
-  } catch (error) {
-    return { success: false, message: error.message };
-  }
+export const updateProduct = async (token, id, productData) => {
+  const response = await fetch(`${API_URL}/${id}`, {
+    method: 'PUT',
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+    body: productData, // FormData
+  });
+  return response.json();
 };
 
-export const searchProducts = async (query, params = {}) => {
-  try {
-    const allParams = { q: query, ...params };
-    const queryString = new URLSearchParams(allParams).toString();
-    const response = await fetch(`${API_URL}/search?${queryString}`, {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-    });
-    return await handleResponse(response);
-  } catch (error) {
-    return { success: false, message: error.message };
-  }
-};
-
-export const getSearchSuggestions = async (query) => {
-  try {
-    const response = await fetch(`/api/search/suggestions?q=${encodeURIComponent(query)}`, {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-    });
-    return await handleResponse(response);
-  } catch (error) {
-    return { success: false, message: error.message };
-  }
+export const deleteProduct = async (token, id) => {
+  const response = await fetch(`${API_URL}/${id}`, {
+    method: 'DELETE',
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+  return response.json();
 };

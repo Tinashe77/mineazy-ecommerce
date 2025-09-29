@@ -1,5 +1,4 @@
 import { createContext, useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
 import {
   login as loginService,
   register as registerService,
@@ -15,21 +14,15 @@ export const AuthContext = createContext();
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [token, setToken] = useState(localStorage.getItem('token'));
-  const [loading, setLoading] = useState(true);
-  const [authLoading, setAuthLoading] = useState(false);
 
   const refreshUser = async () => {
     if (token) {
-      setLoading(true);
       const response = await getProfile(token);
       if (response.id) {
         setUser(response);
       } else {
         logout();
       }
-      setLoading(false);
-    } else {
-      setLoading(false);
     }
   };
 
@@ -38,26 +31,22 @@ export const AuthProvider = ({ children }) => {
   }, [token]);
 
   const login = async (credentials) => {
-    setAuthLoading(true);
     const response = await loginService(credentials);
     if (response.token) {
       setToken(response.token);
       setUser(response.user);
       localStorage.setItem('token', response.token);
     }
-    setAuthLoading(false);
     return response;
   };
 
   const register = async (userData) => {
-    setAuthLoading(true);
     const response = await registerService(userData);
     if (response.token) {
       setToken(response.token);
       setUser(response.user);
       localStorage.setItem('token', response.token);
     }
-    setAuthLoading(false);
     return response;
   };
 
@@ -88,8 +77,6 @@ export const AuthProvider = ({ children }) => {
       value={{
         user,
         token,
-        loading,
-        authLoading,
         login,
         logout,
         register,
