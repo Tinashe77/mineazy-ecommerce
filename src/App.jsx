@@ -1,3 +1,4 @@
+// src/App.jsx
 import { Routes, Route } from 'react-router-dom';
 import Layout from './components/Layout/Layout';
 import Home from './components/Home';
@@ -9,6 +10,8 @@ import ForgotPassword from './components/ForgotPassword';
 import ResetPassword from './components/ResetPassword';
 import ChangePassword from './components/ChangePassword';
 import VerifyEmail from './components/VerifyEmail';
+import ProductList from './components/Products/ProductList';
+import ProductDetail from './components/Products/ProductDetail';
 
 const App = () => {
   return (
@@ -20,6 +23,12 @@ const App = () => {
         <Route path="forgot-password" element={<ForgotPassword />} />
         <Route path="reset-password/:token" element={<ResetPassword />} />
         <Route path="verify-email/:token" element={<VerifyEmail />} />
+        
+        {/* Product Routes */}
+        <Route path="products" element={<ProductList />} />
+        <Route path="products/:id" element={<ProductDetail />} />
+        
+        {/* Protected Routes */}
         <Route
           path="profile"
           element={
