@@ -6,10 +6,20 @@ export default defineConfig({
   plugins: [react()],
   resolve: {
     alias: {
-      '@': path.resolve(__dirname, 'src'), // Ensure this points to your `src` directory
+      '@': path.resolve(__dirname, 'src'),
     },
   },
   esbuild: {
-    target: 'es2020' // This enables optional chaining
+    target: 'es2020'
+  },
+  server: {
+    port: 5173,
+    proxy: {
+      '/api': {
+        target: 'https://mining-equipment-backend.onrender.com',
+        changeOrigin: true,
+        secure: false,
+      }
+    }
   }
 });
