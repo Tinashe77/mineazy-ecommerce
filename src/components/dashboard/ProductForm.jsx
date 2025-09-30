@@ -29,6 +29,7 @@ const ProductForm = () => {
   const [specifications, setSpecifications] = useState([{ key: '', value: '' }]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [imageError, setImageError] = useState(null);
 
   useEffect(() => {
     fetchCategories();
@@ -89,7 +90,42 @@ const ProductForm = () => {
   };
 
   const handleImageChange = (e) => {
-    setImages([...e.target.files]);
+    const files = Array.from(e.target.files);
+    setImageError(null);
+    
+    // Validate files
+    const validFiles = [];
+    const errors = [];
+    
+    files.forEach((file) => {
+      // Check file type
+      if (!file.type.startsWith('image/')) {
+        errors.push(`${file.name} is not an image file`);
+        return;
+      }
+      
+      // Check file size (5MB max)
+      if (file.size > 5 * 1024 * 1024) {
+        errors.push(`${file.name} is too large (max 5MB)`);
+        return;
+      }
+      
+      validFiles.push(file);
+    });
+    
+    // Check total number of images (max 10)
+    const totalImages = existingImages.length + validFiles.length;
+    if (totalImages > 10) {
+      errors.push(`Too many images. Maximum is 10 (you have ${existingImages.length} existing + ${validFiles.length} new)`);
+      setImageError(errors.join(', '));
+      return;
+    }
+    
+    if (errors.length > 0) {
+      setImageError(errors.join(', '));
+    }
+    
+    setImages(validFiles);
   };
 
   const handleSpecificationChange = (index, field, value) => {
@@ -110,34 +146,48 @@ const ProductForm = () => {
     e.preventDefault();
     setLoading(true);
     setError(null);
-
-    const productData = new FormData();
-    
-    // Append form fields
-    Object.keys(formData).forEach((key) => {
-      if (formData[key]) {
-        productData.append(key, formData[key]);
-      }
-    });
-    
-    // Append images
-    images.forEach((image) => {
-      productData.append('images', image);
-    });
-    
-    // Convert specifications array to object
-    const specsObject = {};
-    specifications.forEach(spec => {
-      if (spec.key && spec.value) {
-        specsObject[spec.key] = spec.value;
-      }
-    });
-    
-    if (Object.keys(specsObject).length > 0) {
-      productData.append('specifications', JSON.stringify(specsObject));
-    }
+    setImageError(null);
 
     try {
+      const productData = new FormData();
+      
+      // Append form fields - only non-empty values
+      Object.keys(formData).forEach((key) => {
+        if (formData[key] !== '' && formData[key] !== null && formData[key] !== undefined) {
+          productData.append(key, formData[key]);
+        }
+      });
+      
+      // Append images - each file individually
+      if (images && images.length > 0) {
+        images.forEach((image) => {
+          productData.append('images', image);
+        });
+      }
+      
+      // Convert specifications array to object and append
+      const specsObject = {};
+      specifications.forEach(spec => {
+        if (spec.key && spec.value) {
+          specsObject[spec.key] = spec.value;
+        }
+      });
+      
+      if (Object.keys(specsObject).length > 0) {
+        productData.append('specifications', JSON.stringify(specsObject));
+      }
+
+      // Log FormData contents for debugging
+      console.log('=== FormData Contents ===');
+      for (let pair of productData.entries()) {
+        if (pair[0] === 'images') {
+          console.log(pair[0], ':', pair[1].name, `(${pair[1].size} bytes, ${pair[1].type})`);
+        } else {
+          console.log(pair[0], ':', pair[1]);
+        }
+      }
+      console.log('========================');
+
       let response;
       if (isEditMode) {
         response = await updateProduct(token, id, productData);
@@ -151,7 +201,8 @@ const ProductForm = () => {
         setError(response.message || 'Failed to save product');
       }
     } catch (err) {
-      setError('Failed to save product. Please check your input.');
+      console.error('Product save error:', err);
+      setError('Failed to save product: ' + (err.message || 'Unknown error'));
     } finally {
       setLoading(false);
     }
@@ -302,10 +353,13 @@ const ProductForm = () => {
           <div className="md:col-span-2">
             <label className="block text-gray-700 font-medium mb-2">Product Images</label>
             {existingImages.length > 0 && (
-              <div className="mb-3 flex gap-2 flex-wrap">
-                {existingImages.map((img, idx) => (
-                  <img key={idx} src={img} alt="" className="w-20 h-20 object-cover rounded border" />
-                ))}
+              <div className="mb-3">
+                <p className="text-sm text-gray-600 mb-2">Current images:</p>
+                <div className="flex gap-2 flex-wrap">
+                  {existingImages.map((img, idx) => (
+                    <img key={idx} src={img} alt="" className="w-20 h-20 object-cover rounded border" />
+                  ))}
+                </div>
               </div>
             )}
             <input
@@ -316,7 +370,17 @@ const ProductForm = () => {
               onChange={handleImageChange}
               className="w-full"
             />
-            <p className="text-sm text-gray-500 mt-1">Max 10 images, 5MB each</p>
+            <p className="text-sm text-gray-500 mt-1">
+              Max 10 images total, 5MB each. Accepted formats: JPG, PNG, GIF, WebP
+            </p>
+            {imageError && (
+              <p className="text-sm text-red-600 mt-1">{imageError}</p>
+            )}
+            {images.length > 0 && (
+              <p className="text-sm text-green-600 mt-1">
+                {images.length} new image(s) selected
+              </p>
+            )}
           </div>
           
           <div className="md:col-span-2">
