@@ -23,6 +23,8 @@ import QuoteDetailPage from './components/dashboard/QuoteDetailPage';
 import ContactMessagesPage from './components/dashboard/ContactMessagesPage';
 import ContactMessageDetail from './components/dashboard/ContactMessageDetail';
 import EmailManagementPage from './components/dashboard/EmailManagementPage';
+import SettingsPage from './components/dashboard/SettingsPage';
+
 
 
 const App = () => {
@@ -62,6 +64,8 @@ const App = () => {
         <Route path="contact" element={<ContactMessagesPage />} />
         <Route path="contact/:id" element={<ContactMessageDetail />} />
         <Route path="emails" element={<EmailManagementPage />} />
+        <Route path="settings" element={<SettingsPage />} />
+
 
       </Route>
 
