@@ -18,6 +18,12 @@ import InvoicesPage from './components/dashboard/InvoicesPage';
 import BlogPage from './components/dashboard/BlogPage';
 import BlogPostForm from './components/dashboard/BlogPostForm';
 import BlogCategoriesPage from './components/dashboard/BlogCategoriesPage';
+import QuotesPage from './components/dashboard/QuotesPage';
+import QuoteDetailPage from './components/dashboard/QuoteDetailPage';
+import ContactMessagesPage from './components/dashboard/ContactMessagesPage';
+import ContactMessageDetail from './components/dashboard/ContactMessageDetail';
+import EmailManagementPage from './components/dashboard/EmailManagementPage';
+
 
 const App = () => {
   return (
@@ -51,6 +57,12 @@ const App = () => {
         <Route path="blog/new" element={<BlogPostForm />} />
         <Route path="blog/edit/:id" element={<BlogPostForm />} />
         <Route path="blog/categories" element={<BlogCategoriesPage />} />
+        <Route path="quotes" element={<QuotesPage />} />
+        <Route path="quotes/:id" element={<QuoteDetailPage />} />
+        <Route path="contact" element={<ContactMessagesPage />} />
+        <Route path="contact/:id" element={<ContactMessageDetail />} />
+        <Route path="emails" element={<EmailManagementPage />} />
+
       </Route>
 
       <Route path="*" element={<Navigate to="/login" />} />

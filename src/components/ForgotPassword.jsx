@@ -20,29 +20,37 @@ const ForgotPassword = () => {
   };
 
   return (
-    <div className="flex items-center justify-center py-12">
-      <div className="w-full max-w-md p-8 space-y-6 bg-white rounded-lg shadow-md animate-fade-in">
-        <h2 className="text-2xl font-bold text-center text-gray-800">Forgot Password</h2>
-        <p className="text-sm text-center text-gray-600">
+    <div className="flex items-center justify-center min-h-screen py-12 bg-gradient-to-br from-primary-700 to-accent-500">
+      <div className="w-full max-w-md p-8 space-y-6 glass rounded-2xl shadow-2xl animate-fade-in">
+        <h2 className="text-3xl font-bold text-center text-white">Forgot Password</h2>
+        <p className="text-sm text-center text-white/80">
           Enter your email address and we'll send you a link to reset your password.
         </p>
         <form onSubmit={handleSubmit} className="space-y-6">
           <div>
-            <label className="text-sm font-medium text-gray-700">Email Address</label>
+            <label className="text-sm font-medium text-white">Email Address</label>
             <input
               type="email"
               name="email"
               placeholder="you@example.com"
               onChange={(e) => setEmail(e.target.value)}
               required
-              className="w-full px-3 py-2 mt-1 border border-gray-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500"
+              className="w-full px-4 py-3 mt-1 text-white bg-white/20 border border-white/30 rounded-xl shadow-sm focus:ring-accent-400 focus:border-accent-400 disabled:bg-white/10 placeholder-gray-300"
             />
           </div>
-          {message && <p className="text-sm text-green-600">{message}</p>}
-          {error && <p className="text-sm text-red-600">{error}</p>}
+          {message && (
+            <div className="p-3 bg-green-500/80 border border-green-700 rounded-xl">
+              <p className="text-sm text-white">{message}</p>
+            </div>
+          )}
+          {error && (
+            <div className="p-3 bg-red-500/80 border border-red-700 rounded-xl">
+              <p className="text-sm text-white">{error}</p>
+            </div>
+          )}
           <button
             type="submit"
-            className="w-full py-2 text-white transition duration-150 ease-in-out bg-primary-700 rounded-md hover:bg-primary-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
+            className="w-full py-3 text-lg text-primary-700 font-bold transition duration-300 ease-in-out bg-accent-500 rounded-xl hover:bg-accent-600 focus:outline-none focus:ring-4 focus:ring-accent-400/50 disabled:bg-gray-400 disabled:cursor-not-allowed flex items-center justify-center shadow-lg"
           >
             Send Reset Link
           </button>
