@@ -64,5 +64,17 @@ export default {
       },
     },
   },
-  plugins: [],
+  plugins: [
+    function({ addUtilities }) {
+      const newUtilities = {
+        '.glass': {
+          'background': 'rgba(255, 255, 255, 0.2)',
+          'backdrop-filter': 'blur(10px)',
+          '-webkit-backdrop-filter': 'blur(10px)',
+          'border': '1px solid rgba(255, 255, 255, 0.3)',
+        }
+      }
+      addUtilities(newUtilities, ['responsive', 'hover'])
+    }
+  ],
 }
