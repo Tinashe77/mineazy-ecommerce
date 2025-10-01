@@ -1,3 +1,4 @@
+// src/components/dashboard/ProductForm.jsx - FIXED VERSION
 import { useState, useEffect, useContext } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { AuthContext } from '../../context/AuthContext';
@@ -29,7 +30,6 @@ const ProductForm = () => {
   const [specifications, setSpecifications] = useState([{ key: '', value: '' }]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-  const [imageError, setImageError] = useState(null);
 
   useEffect(() => {
     fetchCategories();
@@ -68,7 +68,6 @@ const ProductForm = () => {
         });
         setExistingImages(response.images || []);
         
-        // Convert specifications object to array
         if (response.specifications) {
           const specsArray = Object.entries(response.specifications).map(([key, value]) => ({
             key,
@@ -91,41 +90,11 @@ const ProductForm = () => {
 
   const handleImageChange = (e) => {
     const files = Array.from(e.target.files);
-    setImageError(null);
-    
-    // Validate files
-    const validFiles = [];
-    const errors = [];
-    
-    files.forEach((file) => {
-      // Check file type
-      if (!file.type.startsWith('image/')) {
-        errors.push(`${file.name} is not an image file`);
-        return;
-      }
-      
-      // Check file size (5MB max)
-      if (file.size > 5 * 1024 * 1024) {
-        errors.push(`${file.name} is too large (max 5MB)`);
-        return;
-      }
-      
-      validFiles.push(file);
-    });
-    
-    // Check total number of images (max 10)
-    const totalImages = existingImages.length + validFiles.length;
-    if (totalImages > 10) {
-      errors.push(`Too many images. Maximum is 10 (you have ${existingImages.length} existing + ${validFiles.length} new)`);
-      setImageError(errors.join(', '));
+    if (files.length > 5) {
+      setError('Maximum 5 images allowed');
       return;
     }
-    
-    if (errors.length > 0) {
-      setImageError(errors.join(', '));
-    }
-    
-    setImages(validFiles);
+    setImages(files);
   };
 
   const handleSpecificationChange = (index, field, value) => {
@@ -146,48 +115,60 @@ const ProductForm = () => {
     e.preventDefault();
     setLoading(true);
     setError(null);
-    setImageError(null);
+
+    // Create FormData
+    const productData = new FormData();
+    
+    // Append required fields
+    productData.append('name', formData.name);
+    productData.append('sku', formData.sku);
+    productData.append('price', formData.price.toString());
+    productData.append('category', formData.category);
+    productData.append('stockQuantity', formData.stockQuantity.toString());
+    
+    // Append optional fields - check for empty string too
+    if (formData.description && formData.description.trim()) {
+      productData.append('description', formData.description);
+    }
+    if (formData.shortDescription && formData.shortDescription.trim()) {
+      productData.append('shortDescription', formData.shortDescription);
+    }
+    if (formData.salePrice && formData.salePrice !== '') {
+      productData.append('salePrice', formData.salePrice.toString());
+    }
+    if (formData.weight && formData.weight !== '') {
+      productData.append('weight', formData.weight.toString());
+    }
+    if (formData.tags && formData.tags.trim()) {
+      productData.append('tags', formData.tags);
+    }
+    
+    // Convert specifications array to object and stringify
+    const specsObject = {};
+    specifications.forEach(spec => {
+      if (spec.key && spec.key.trim() && spec.value && spec.value.trim()) {
+        specsObject[spec.key.trim()] = spec.value.trim();
+      }
+    });
+    
+    if (Object.keys(specsObject).length > 0) {
+      productData.append('specifications', JSON.stringify(specsObject));
+    }
+    
+    // Append images - Use 'images' as field name (matches backend)
+    if (images && images.length > 0) {
+      images.forEach((image) => {
+        productData.append('images', image);
+      });
+    }
+    
+    // Debug: Log FormData contents
+    console.log('FormData contents:');
+    for (let pair of productData.entries()) {
+      console.log(pair[0] + ': ' + (pair[1] instanceof File ? pair[1].name : pair[1]));
+    }
 
     try {
-      const productData = new FormData();
-      
-      // Append form fields - only non-empty values
-      Object.keys(formData).forEach((key) => {
-        if (formData[key] !== '' && formData[key] !== null && formData[key] !== undefined) {
-          productData.append(key, formData[key]);
-        }
-      });
-      
-      // Append images - each file individually
-      if (images && images.length > 0) {
-        images.forEach((image) => {
-          productData.append('images', image);
-        });
-      }
-      
-      // Convert specifications array to object and append
-      const specsObject = {};
-      specifications.forEach(spec => {
-        if (spec.key && spec.value) {
-          specsObject[spec.key] = spec.value;
-        }
-      });
-      
-      if (Object.keys(specsObject).length > 0) {
-        productData.append('specifications', JSON.stringify(specsObject));
-      }
-
-      // Log FormData contents for debugging
-      console.log('=== FormData Contents ===');
-      for (let pair of productData.entries()) {
-        if (pair[0] === 'images') {
-          console.log(pair[0], ':', pair[1].name, `(${pair[1].size} bytes, ${pair[1].type})`);
-        } else {
-          console.log(pair[0], ':', pair[1]);
-        }
-      }
-      console.log('========================');
-
       let response;
       if (isEditMode) {
         response = await updateProduct(token, id, productData);
@@ -201,8 +182,7 @@ const ProductForm = () => {
         setError(response.message || 'Failed to save product');
       }
     } catch (err) {
-      console.error('Product save error:', err);
-      setError('Failed to save product: ' + (err.message || 'Unknown error'));
+      setError('Failed to save product. Please check your input.');
     } finally {
       setLoading(false);
     }
@@ -213,62 +193,62 @@ const ProductForm = () => {
   }
 
   return (
-    <div>
-      <h1 className="text-3xl font-bold text-gray-800 mb-6">
+    <div className="dark:text-white">
+      <h1 className="text-3xl font-bold text-gray-800 dark:text-white mb-6">
         {isEditMode ? 'Edit Product' : 'Create Product'}
       </h1>
       
-      <form onSubmit={handleSubmit} className="bg-white p-8 rounded-lg shadow-md">
+      <form onSubmit={handleSubmit} className="bg-white dark:bg-gray-800 p-8 rounded-lg shadow-md">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
-            <label className="block text-gray-700 font-medium mb-2">Product Name *</label>
+            <label className="block text-gray-700 dark:text-gray-300 font-medium mb-2">Product Name *</label>
             <input
               type="text"
               name="name"
               value={formData.name}
               onChange={handleChange}
-              className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500"
+              className="w-full px-3 py-2 border dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg focus:ring-2 focus:ring-indigo-500"
               required
             />
           </div>
           
           <div>
-            <label className="block text-gray-700 font-medium mb-2">SKU *</label>
+            <label className="block text-gray-700 dark:text-gray-300 font-medium mb-2">SKU *</label>
             <input
               type="text"
               name="sku"
               value={formData.sku}
               onChange={handleChange}
-              className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500"
+              className="w-full px-3 py-2 border dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg focus:ring-2 focus:ring-indigo-500"
               required
             />
           </div>
           
           <div className="md:col-span-2">
-            <label className="block text-gray-700 font-medium mb-2">Short Description</label>
+            <label className="block text-gray-700 dark:text-gray-300 font-medium mb-2">Short Description</label>
             <input
               type="text"
               name="shortDescription"
               value={formData.shortDescription}
               onChange={handleChange}
-              className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500"
+              className="w-full px-3 py-2 border dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg focus:ring-2 focus:ring-indigo-500"
               maxLength={200}
             />
           </div>
           
           <div className="md:col-span-2">
-            <label className="block text-gray-700 font-medium mb-2">Description</label>
+            <label className="block text-gray-700 dark:text-gray-300 font-medium mb-2">Description</label>
             <textarea
               name="description"
               value={formData.description}
               onChange={handleChange}
               rows={5}
-              className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500"
+              className="w-full px-3 py-2 border dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg focus:ring-2 focus:ring-indigo-500"
             />
           </div>
           
           <div>
-            <label className="block text-gray-700 font-medium mb-2">Price *</label>
+            <label className="block text-gray-700 dark:text-gray-300 font-medium mb-2">Price *</label>
             <input
               type="number"
               name="price"
@@ -276,13 +256,13 @@ const ProductForm = () => {
               onChange={handleChange}
               step="0.01"
               min="0"
-              className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500"
+              className="w-full px-3 py-2 border dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg focus:ring-2 focus:ring-indigo-500"
               required
             />
           </div>
           
           <div>
-            <label className="block text-gray-700 font-medium mb-2">Sale Price</label>
+            <label className="block text-gray-700 dark:text-gray-300 font-medium mb-2">Sale Price</label>
             <input
               type="number"
               name="salePrice"
@@ -290,30 +270,30 @@ const ProductForm = () => {
               onChange={handleChange}
               step="0.01"
               min="0"
-              className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500"
+              className="w-full px-3 py-2 border dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg focus:ring-2 focus:ring-indigo-500"
             />
           </div>
           
           <div>
-            <label className="block text-gray-700 font-medium mb-2">Stock Quantity *</label>
+            <label className="block text-gray-700 dark:text-gray-300 font-medium mb-2">Stock Quantity *</label>
             <input
               type="number"
               name="stockQuantity"
               value={formData.stockQuantity}
               onChange={handleChange}
               min="0"
-              className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500"
+              className="w-full px-3 py-2 border dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg focus:ring-2 focus:ring-indigo-500"
               required
             />
           </div>
           
           <div>
-            <label className="block text-gray-700 font-medium mb-2">Category *</label>
+            <label className="block text-gray-700 dark:text-gray-300 font-medium mb-2">Category *</label>
             <select
               name="category"
               value={formData.category}
               onChange={handleChange}
-              className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500"
+              className="w-full px-3 py-2 border dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg focus:ring-2 focus:ring-indigo-500"
               required
             >
               <option value="">Select a category</option>
@@ -326,7 +306,7 @@ const ProductForm = () => {
           </div>
           
           <div>
-            <label className="block text-gray-700 font-medium mb-2">Weight (kg)</label>
+            <label className="block text-gray-700 dark:text-gray-300 font-medium mb-2">Weight (kg)</label>
             <input
               type="number"
               name="weight"
@@ -334,32 +314,29 @@ const ProductForm = () => {
               onChange={handleChange}
               step="0.01"
               min="0"
-              className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500"
+              className="w-full px-3 py-2 border dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg focus:ring-2 focus:ring-indigo-500"
             />
           </div>
           
           <div>
-            <label className="block text-gray-700 font-medium mb-2">Tags (comma-separated)</label>
+            <label className="block text-gray-700 dark:text-gray-300 font-medium mb-2">Tags (comma-separated)</label>
             <input
               type="text"
               name="tags"
               value={formData.tags}
               onChange={handleChange}
               placeholder="mining, equipment, heavy-duty"
-              className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500"
+              className="w-full px-3 py-2 border dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg focus:ring-2 focus:ring-indigo-500"
             />
           </div>
           
           <div className="md:col-span-2">
-            <label className="block text-gray-700 font-medium mb-2">Product Images</label>
+            <label className="block text-gray-700 dark:text-gray-300 font-medium mb-2">Product Images (Max 5)</label>
             {existingImages.length > 0 && (
-              <div className="mb-3">
-                <p className="text-sm text-gray-600 mb-2">Current images:</p>
-                <div className="flex gap-2 flex-wrap">
-                  {existingImages.map((img, idx) => (
-                    <img key={idx} src={img} alt="" className="w-20 h-20 object-cover rounded border" />
-                  ))}
-                </div>
+              <div className="mb-3 flex gap-2 flex-wrap">
+                {existingImages.map((img, idx) => (
+                  <img key={idx} src={img} alt="" className="w-20 h-20 object-cover rounded border dark:border-gray-600" />
+                ))}
               </div>
             )}
             <input
@@ -368,23 +345,13 @@ const ProductForm = () => {
               multiple
               accept="image/*"
               onChange={handleImageChange}
-              className="w-full"
+              className="w-full dark:text-gray-300"
             />
-            <p className="text-sm text-gray-500 mt-1">
-              Max 10 images total, 5MB each. Accepted formats: JPG, PNG, GIF, WebP
-            </p>
-            {imageError && (
-              <p className="text-sm text-red-600 mt-1">{imageError}</p>
-            )}
-            {images.length > 0 && (
-              <p className="text-sm text-green-600 mt-1">
-                {images.length} new image(s) selected
-              </p>
-            )}
+            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Max 5 images, 5MB each. Formats: JPG, PNG, GIF, WebP</p>
           </div>
           
           <div className="md:col-span-2">
-            <label className="block text-gray-700 font-medium mb-2">Specifications</label>
+            <label className="block text-gray-700 dark:text-gray-300 font-medium mb-2">Specifications</label>
             {specifications.map((spec, index) => (
               <div key={index} className="flex gap-2 mb-2">
                 <input
@@ -392,14 +359,14 @@ const ProductForm = () => {
                   placeholder="Key (e.g., Brand)"
                   value={spec.key}
                   onChange={(e) => handleSpecificationChange(index, 'key', e.target.value)}
-                  className="flex-1 px-3 py-2 border rounded-lg"
+                  className="flex-1 px-3 py-2 border dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg"
                 />
                 <input
                   type="text"
                   placeholder="Value (e.g., Caterpillar)"
                   value={spec.value}
                   onChange={(e) => handleSpecificationChange(index, 'value', e.target.value)}
-                  className="flex-1 px-3 py-2 border rounded-lg"
+                  className="flex-1 px-3 py-2 border dark:border-gray-600 dark:bg-gray-700 dark:text-white rounded-lg"
                 />
                 <button
                   type="button"
@@ -413,7 +380,7 @@ const ProductForm = () => {
             <button
               type="button"
               onClick={addSpecification}
-              className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300"
+              className="px-4 py-2 bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-white rounded-lg hover:bg-gray-300 dark:hover:bg-gray-500"
             >
               Add Specification
             </button>
@@ -421,8 +388,8 @@ const ProductForm = () => {
         </div>
         
         {error && (
-          <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg">
-            <p className="text-red-600">{error}</p>
+          <div className="mt-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
+            <p className="text-red-600 dark:text-red-400">{error}</p>
           </div>
         )}
         
@@ -437,7 +404,7 @@ const ProductForm = () => {
           <button
             type="button"
             onClick={() => navigate('/dashboard/products')}
-            className="px-6 py-2 text-gray-700 bg-gray-200 rounded-lg hover:bg-gray-300"
+            className="px-6 py-2 text-gray-700 dark:text-gray-300 bg-gray-200 dark:bg-gray-600 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-500"
           >
             Cancel
           </button>

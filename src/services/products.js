@@ -1,4 +1,4 @@
-// src/services/products.js
+// src/services/products.js - FIXED VERSION
 const API_BASE_URL = import.meta.env.MODE === 'production' 
   ? 'https://mining-equipment-backend.onrender.com' 
   : '';
@@ -16,7 +16,6 @@ const handleResponse = async (response) => {
   return data;
 };
 
-// Public endpoint - Get products with filtering and pagination
 export const getProducts = async (params = {}) => {
   try {
     const queryString = new URLSearchParams(params).toString();
@@ -32,7 +31,6 @@ export const getProducts = async (params = {}) => {
   }
 };
 
-// Public endpoint - Get single product by ID
 export const getProductById = async (id) => {
   try {
     const response = await fetch(`${API_URL}/${id}`, {
@@ -47,7 +45,6 @@ export const getProductById = async (id) => {
   }
 };
 
-// Public endpoint - Get related products
 export const getRelatedProducts = async (id) => {
   try {
     const response = await fetch(`${API_URL}/${id}/related`, {
@@ -62,7 +59,6 @@ export const getRelatedProducts = async (id) => {
   }
 };
 
-// Public endpoint - Advanced product search
 export const searchProducts = async (query, params = {}) => {
   try {
     const allParams = { q: query, ...params };
@@ -79,7 +75,6 @@ export const searchProducts = async (query, params = {}) => {
   }
 };
 
-// Public endpoint - Get search suggestions
 export const getSearchSuggestions = async (query) => {
   try {
     const response = await fetch(`${SEARCH_URL}/suggestions?q=${encodeURIComponent(query)}`, {
@@ -94,17 +89,16 @@ export const getSearchSuggestions = async (query) => {
   }
 };
 
-// Protected endpoint - Create new product (Inventory Manager/Super Admin)
+// FIXED: Proper FormData handling - DO NOT set Content-Type header
 export const createProduct = async (token, productData) => {
   try {
-    // productData should be FormData with: name, description, price, sku, category, images (files), stockQuantity, specifications, tags
     const response = await fetch(API_URL, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${token}`,
-        // Don't set Content-Type for FormData - browser will set it with boundary
+        // DO NOT set Content-Type - browser will set it with boundary for FormData
       },
-      body: productData, // FormData
+      body: productData, // FormData object
     });
     return await handleResponse(response);
   } catch (error) {
@@ -112,17 +106,16 @@ export const createProduct = async (token, productData) => {
   }
 };
 
-// Protected endpoint - Update product (Inventory Manager/Super Admin)
+// FIXED: Proper FormData handling - DO NOT set Content-Type header
 export const updateProduct = async (token, id, productData) => {
   try {
-    // productData should be FormData
     const response = await fetch(`${API_URL}/${id}`, {
       method: 'PUT',
       headers: {
         'Authorization': `Bearer ${token}`,
-        // Don't set Content-Type for FormData
+        // DO NOT set Content-Type - browser will set it with boundary for FormData
       },
-      body: productData, // FormData
+      body: productData, // FormData object
     });
     return await handleResponse(response);
   } catch (error) {
@@ -130,7 +123,6 @@ export const updateProduct = async (token, id, productData) => {
   }
 };
 
-// Protected endpoint - Delete product (Inventory Manager/Super Admin)
 export const deleteProduct = async (token, id) => {
   try {
     const response = await fetch(`${API_URL}/${id}`, {
@@ -146,16 +138,17 @@ export const deleteProduct = async (token, id) => {
   }
 };
 
-// Protected endpoint - Bulk import products from CSV
+// FIXED: CSV import with proper FormData
 export const bulkImportProducts = async (token, csvFile) => {
   try {
     const formData = new FormData();
-    formData.append('csv', csvFile);
+    formData.append('csv', csvFile); // Field name must match backend expectation
     
     const response = await fetch(`${API_URL}/bulk-import`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${token}`,
+        // DO NOT set Content-Type for FormData
       },
       body: formData,
     });
@@ -165,7 +158,6 @@ export const bulkImportProducts = async (token, csvFile) => {
   }
 };
 
-// Protected endpoint - Get CSV import template
 export const getImportTemplate = async (token) => {
   try {
     const response = await fetch(`${API_URL}/import/template`, {
@@ -174,14 +166,13 @@ export const getImportTemplate = async (token) => {
         'Authorization': `Bearer ${token}`,
       },
     });
-    return await response.blob(); // Returns file blob
+    return await response.json();
   } catch (error) {
     console.error('Failed to download template:', error);
     return null;
   }
 };
 
-// Protected endpoint - Download sample CSV
 export const getSampleCSV = async (token) => {
   try {
     const response = await fetch(`${API_URL}/import/sample`, {
@@ -190,7 +181,7 @@ export const getSampleCSV = async (token) => {
         'Authorization': `Bearer ${token}`,
       },
     });
-    return await response.blob(); // Returns file blob
+    return await response.blob();
   } catch (error) {
     console.error('Failed to download sample:', error);
     return null;
