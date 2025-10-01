@@ -1691,8 +1691,8 @@ https://mining-equipment-backend.onrender.com/api/docs/postman.json
 Use these test accounts for development:
 
 **Admin:**
-- Email: `webmaster@dicomm.co.zw`
-- Password: `Admin123!`
+- Email: `email@email.com`
+- Password: `asdfsa123!`
 - Role: `super_admin`
 
 **Customer:**
