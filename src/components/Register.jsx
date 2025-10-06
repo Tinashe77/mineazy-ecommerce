@@ -29,63 +29,63 @@ const Register = () => {
 
   return (
     <div className="flex items-center justify-center min-h-screen py-12 bg-gradient-to-br from-primary-700 to-accent-500">
-      <div className="w-full max-w-md p-8 space-y-6 glass rounded-2xl shadow-2xl">
+      <div className="form-container-glass">
         <h2 className="text-3xl font-bold text-center text-white">Create an Account</h2>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <div>
-              <label className="text-sm font-medium text-white">First Name</label>
+              <label className="form-label-glass">First Name</label>
               <input
                 type="text"
                 name="firstName"
                 placeholder="John"
                 onChange={handleChange}
                 required
-                className="w-full px-4 py-3 mt-1 text-white bg-white/20 border border-white/30 rounded-xl shadow-sm focus:ring-accent-400 focus:border-accent-400 disabled:bg-white/10 placeholder-gray-300"
+                className="form-input-glass"
               />
             </div>
             <div>
-              <label className="text-sm font-medium text-white">Last Name</label>
+              <label className="form-label-glass">Last Name</label>
               <input
                 type="text"
                 name="lastName"
                 placeholder="Doe"
                 onChange={handleChange}
                 required
-                className="w-full px-4 py-3 mt-1 text-white bg-white/20 border border-white/30 rounded-xl shadow-sm focus:ring-accent-400 focus:border-accent-400 disabled:bg-white/10 placeholder-gray-300"
+                className="form-input-glass"
               />
             </div>
           </div>
           <div>
-            <label className="text-sm font-medium text-white">Email Address</label>
+            <label className="form-label-glass">Email Address</label>
             <input
               type="email"
               name="email"
               placeholder="you@example.com"
               onChange={handleChange}
               required
-              className="w-full px-4 py-3 mt-1 text-white bg-white/20 border border-white/30 rounded-xl shadow-sm focus:ring-accent-400 focus:border-accent-400 disabled:bg-white/10 placeholder-gray-300"
+              className="form-input-glass"
             />
           </div>
           <div>
-            <label className="text-sm font-medium text-white">Password</label>
+            <label className="form-label-glass">Password</label>
             <input
               type="password"
               name="password"
               placeholder="••••••••"
               onChange={handleChange}
               required
-              className="w-full px-4 py-3 mt-1 text-white bg-white/20 border border-white/30 rounded-xl shadow-sm focus:ring-accent-400 focus:border-accent-400 disabled:bg-white/10 placeholder-gray-300"
+              className="form-input-glass"
             />
           </div>
           <div>
-            <label className="text-sm font-medium text-white">Phone Number (Optional)</label>
+            <label className="form-label-glass">Phone Number (Optional)</label>
             <input
               type="text"
               name="phone"
               placeholder="+263-xxx-xxxx"
               onChange={handleChange}
-              className="w-full px-4 py-3 mt-1 text-white bg-white/20 border border-white/30 rounded-xl shadow-sm focus:ring-accent-400 focus:border-accent-400 disabled:bg-white/10 placeholder-gray-300"
+              className="form-input-glass"
             />
           </div>
           {error && (
@@ -95,7 +95,7 @@ const Register = () => {
           )}
           <button
             type="submit"
-            className="w-full py-3 text-lg text-primary-700 font-bold transition duration-300 ease-in-out bg-accent-500 rounded-xl hover:bg-accent-600 focus:outline-none focus:ring-4 focus:ring-accent-400/50 disabled:bg-gray-400 disabled:cursor-not-allowed flex items-center justify-center shadow-lg"
+            className="form-button-glass"
           >
             Create Account
           </button>
