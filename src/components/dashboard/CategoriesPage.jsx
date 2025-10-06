@@ -10,6 +10,8 @@ const CategoriesPage = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const { token } = useContext(AuthContext);
+     const [showFilters, setShowFilters] = useState(false);
+
 
   // Filter states
   const [filters, setFilters] = useState({
@@ -191,7 +193,28 @@ const CategoriesPage = () => {
       
 
       {/* Filters - Only show in list view */}
-      {viewMode === 'list' && (
+      <div className="mb-4">
+  <button
+    onClick={() => setShowFilters(!showFilters)}
+    className="flex items-center gap-2 px-4 py-2.5 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors shadow-sm"
+  >
+    <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
+    </svg>
+    <span className="font-medium text-gray-700">
+      {showFilters ? 'Hide Filters' : 'Show Filters'}
+    </span>
+    <svg 
+      className={`w-4 h-4 text-gray-600 transition-transform ${showFilters ? 'rotate-180' : ''}`}
+      fill="none" 
+      stroke="currentColor" 
+      viewBox="0 0 24 24"
+    >
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+    </svg>
+  </button>
+</div>
+      {showFilters && (
         <div className="bg-white rounded-lg shadow-md p-6 mb-6">
           <form onSubmit={handleSearch}>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">

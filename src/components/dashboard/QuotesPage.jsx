@@ -9,6 +9,8 @@ const QuotesPage = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const { token } = useContext(AuthContext);
+  const [showFilters, setShowFilters] = useState(false);
+
 
   // Filter states
   const [filters, setFilters] = useState({
