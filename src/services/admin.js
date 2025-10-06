@@ -18,7 +18,7 @@ const handleResponse = async (response) => {
 // Get admin dashboard statistics
 export const getDashboardStats = async (token, period = 30) => {
   try {
-    const response = await fetch(`${API_URL}/stats?period=${period}`, {
+    const response = await fetch(`${API_URL}/dashboard?period=${period}`, {
       method: 'GET',
       headers: {
         'Authorization': `Bearer ${token}`,

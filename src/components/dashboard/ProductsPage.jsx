@@ -1,7 +1,3 @@
-// src/components/dashboard/ProductsPage.jsx - HEADER & FILTERS SECTION
-// This shows the redesigned style for the products page header and filters
-// Apply this same styling approach to all other admin pages
-
 import { useEffect, useState, useContext } from 'react';
 import { Link } from 'react-router-dom';
 import { AuthContext } from '../../context/AuthContext';
@@ -9,113 +5,218 @@ import { getProducts, deleteProduct, bulkImportProducts } from '../../services/p
 import { getCategories } from '../../services/categories';
 
 const ProductsPage = () => {
-  // ... (keep all existing state and logic)
+  const [products, setProducts] = useState([]);
+  const [categories, setCategories] = useState([]);
+  const [pagination, setPagination] = useState({});
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const { token } = useContext(AuthContext);
+
+  // Filter states
+  const [filters, setFilters] = useState({
+    search: '',
+    category: '',
+    inStock: '',
+    minPrice: '',
+    maxPrice: '',
+    sortBy: 'createdAt',
+    sortOrder: 'desc',
+  });
+
+  // Bulk import states
+  const [showImportModal, setShowImportModal] = useState(false);
+  const [importFile, setImportFile] = useState(null);
+  const [importing, setImporting] = useState(false);
+  const [importError, setImportError] = useState(null);
+
+  useEffect(() => {
+    fetchCategories();
+    fetchProducts();
+  }, []);
+
+  const fetchCategories = async () => {
+    const response = await getCategories({ activeOnly: true });
+    if (response.categories) {
+      setCategories(response.categories);
+    }
+  };
+
+  const fetchProducts = async (page = 1) => {
+    setLoading(true);
+    setError(null);
+    
+    try {
+      const params = {
+        page,
+        limit: 20,
+        ...filters,
+      };
+
+      // Remove empty filters
+      Object.keys(params).forEach(key => {
+        if (params[key] === '' || params[key] === null || params[key] === undefined) {
+          delete params[key];
+        }
+      });
+
+      const response = await getProducts(params);
+      
+      if (response.products) {
+        setProducts(response.products);
+        setPagination(response.pagination);
+      } else {
+        setError('Failed to fetch products');
+      }
+    } catch (err) {
+      setError('Failed to fetch products: ' + err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDelete = async (id) => {
+    if (window.confirm('Are you sure you want to delete this product?')) {
+      try {
+        const response = await deleteProduct(token, id);
+        
+        if (response.success !== false) {
+          fetchProducts(pagination.currentPage);
+        } else {
+          alert('Failed to delete product: ' + response.message);
+        }
+      } catch (error) {
+        alert('Failed to delete product: ' + error.message);
+      }
+    }
+  };
+
+  const handlePageChange = (page) => {
+    fetchProducts(page);
+  };
+
+  const handleFilterChange = (e) => {
+    const { name, value } = e.target;
+    setFilters(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleSearch = (e) => {
+    e.preventDefault();
+    fetchProducts(1);
+  };
+
+  const resetFilters = () => {
+    setFilters({
+      search: '',
+      category: '',
+      inStock: '',
+      minPrice: '',
+      maxPrice: '',
+      sortBy: 'createdAt',
+      sortOrder: 'desc',
+    });
+    setTimeout(() => fetchProducts(1), 0);
+  };
+
+  const handleImportFile = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      if (!file.name.endsWith('.csv')) {
+        setImportError('Please select a CSV file');
+        return;
+      }
+      setImportFile(file);
+      setImportError(null);
+    }
+  };
+
+  const handleBulkImport = async () => {
+  if (!importFile) {
+    setImportError('Please select a file');
+    return;
+  }
+
+  // Validate file type
+  if (!importFile.name.endsWith('.csv')) {
+    setImportError('Please select a CSV file');
+    return;
+  }
+
+  // Validate file size (optional, but good practice)
+  if (importFile.size > 10 * 1024 * 1024) { // 10MB max
+    setImportError('File size must be less than 10MB');
+    return;
+  }
+
+  setImporting(true);
+  setImportError(null);
+
+  try {
+    const response = await bulkImportProducts(token, importFile);
+    
+    if (response.success !== false && !response.errors) {
+      alert(`Successfully imported products!`);
+      setShowImportModal(false);
+      setImportFile(null);
+      fetchProducts(1);
+    } else {
+      setImportError(response.message || response.errors?.[0]?.msg || 'Import failed');
+    }
+  } catch (error) {
+    setImportError('Import failed: ' + error.message);
+  } finally {
+    setImporting(false);
+  }
+};
+
+  const downloadTemplate = () => {
+    // Create CSV template
+    const template = `name,description,price,sku,category,stockQuantity,specifications,tags
+"Sample Product","Product description",99.99,PROD001,category-id,100,"{""brand"":""Brand Name""}","tag1,tag2"`;
+    
+    const blob = new Blob([template], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'product-import-template.csv';
+    a.click();
+    window.URL.revokeObjectURL(url);
+  };
+
+  if (loading && products.length === 0) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <svg className="animate-spin h-8 w-8 text-indigo-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+        </svg>
+      </div>
+    );
+  }
 
   return (
-    <div className="space-y-6">
-      {/* Page Header */}
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-800">Products</h1>
-          <p className="text-sm text-gray-500 mt-1">Manage your product inventory</p>
-        </div>
-        <div className="flex gap-3">
+    <div>
+      <div className="flex justify-between items-center mb-6">
+        <h1 className="text-3xl font-bold text-gray-800">Products</h1>
+        <div className="flex gap-2">
           <button
             onClick={() => setShowImportModal(true)}
-            className="px-4 py-2.5 text-primary-600 bg-white border-2 border-primary-600 rounded-lg hover:bg-primary-50 transition-colors font-medium flex items-center gap-2"
+            className="px-4 py-2 text-indigo-600 bg-white border border-indigo-600 rounded-md hover:bg-indigo-50"
           >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-            </svg>
             Bulk Import
           </button>
           <Link
             to="/dashboard/products/new"
-            className="px-4 py-2.5 text-white bg-primary-700 rounded-lg hover:bg-primary-800 transition-colors font-medium flex items-center gap-2 shadow-sm"
+            className="px-4 py-2 text-white bg-indigo-600 rounded-md hover:bg-indigo-700"
           >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-            </svg>
             Add Product
           </Link>
         </div>
       </div>
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-gray-500 uppercase tracking-wider">Total Products</p>
-              <p className="text-2xl font-bold text-gray-800 mt-1">{pagination.totalProducts || 0}</p>
-            </div>
-            <div className="p-3 bg-blue-100 rounded-lg">
-              <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
-              </svg>
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-gray-500 uppercase tracking-wider">In Stock</p>
-              <p className="text-2xl font-bold text-gray-800 mt-1">{products.filter(p => p.inStock).length}</p>
-            </div>
-            <div className="p-3 bg-green-100 rounded-lg">
-              <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-gray-500 uppercase tracking-wider">Out of Stock</p>
-              <p className="text-2xl font-bold text-gray-800 mt-1">{products.filter(p => !p.inStock).length}</p>
-            </div>
-            <div className="p-3 bg-red-100 rounded-lg">
-              <svg className="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-gray-500 uppercase tracking-wider">Categories</p>
-              <p className="text-2xl font-bold text-gray-800 mt-1">{categories.length}</p>
-            </div>
-            <div className="p-3 bg-purple-100 rounded-lg">
-              <svg className="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
-              </svg>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Filters Section */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-semibold text-gray-800">Filters</h2>
-          <button
-            onClick={resetFilters}
-            className="text-sm text-gray-600 hover:text-primary-700 font-medium flex items-center gap-1"
-          >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-            </svg>
-            Reset Filters
-          </button>
-        </div>
+      {/* Filters */}
+      <div className="bg-white rounded-lg shadow-md p-6 mb-6">
         <form onSubmit={handleSearch}>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">Search</label>
               <input
@@ -124,7 +225,7 @@ const ProductsPage = () => {
                 value={filters.search}
                 onChange={handleFilterChange}
                 placeholder="Product name or SKU"
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all"
+                className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500"
               />
             </div>
 
@@ -134,7 +235,7 @@ const ProductsPage = () => {
                 name="category"
                 value={filters.category}
                 onChange={handleFilterChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all"
+                className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500"
               >
                 <option value="">All Categories</option>
                 {categories.map((cat) => (
@@ -151,7 +252,7 @@ const ProductsPage = () => {
                 name="inStock"
                 value={filters.inStock}
                 onChange={handleFilterChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all"
+                className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500"
               >
                 <option value="">All</option>
                 <option value="true">In Stock</option>
@@ -160,12 +261,38 @@ const ProductsPage = () => {
             </div>
 
             <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Min Price</label>
+              <input
+                type="number"
+                name="minPrice"
+                value={filters.minPrice}
+                onChange={handleFilterChange}
+                placeholder="0"
+                step="0.01"
+                className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Max Price</label>
+              <input
+                type="number"
+                name="maxPrice"
+                value={filters.maxPrice}
+                onChange={handleFilterChange}
+                placeholder="10000"
+                step="0.01"
+                className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500"
+              />
+            </div>
+
+            <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">Sort By</label>
               <select
                 name="sortBy"
                 value={filters.sortBy}
                 onChange={handleFilterChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all"
+                className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500"
               >
                 <option value="createdAt">Date Created</option>
                 <option value="name">Name</option>
@@ -180,7 +307,7 @@ const ProductsPage = () => {
                 name="sortOrder"
                 value={filters.sortOrder}
                 onChange={handleFilterChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all"
+                className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500"
               >
                 <option value="desc">Descending</option>
                 <option value="asc">Ascending</option>
@@ -188,136 +315,103 @@ const ProductsPage = () => {
             </div>
           </div>
 
-          <div className="flex gap-3 mt-4">
+          <div className="flex gap-2 mt-4">
             <button
               type="submit"
-              className="px-6 py-2.5 bg-primary-700 text-white rounded-lg hover:bg-primary-800 transition-colors font-medium"
+              className="px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700"
             >
               Apply Filters
+            </button>
+            <button
+              type="button"
+              onClick={resetFilters}
+              className="px-6 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300"
+            >
+              Reset
             </button>
           </div>
         </form>
       </div>
 
-      {/* Error State */}
       {error && (
-        <div className="bg-red-50 border-l-4 border-red-500 rounded-lg p-4">
-          <div className="flex items-center">
-            <svg className="w-5 h-5 text-red-500 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-            <p className="text-red-800 font-medium">{error}</p>
-          </div>
+        <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
+          <p className="text-red-800">{error}</p>
           <button
             onClick={() => fetchProducts()}
-            className="mt-3 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 text-sm font-medium"
+            className="mt-2 px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"
           >
-            Try Again
+            Retry
           </button>
         </div>
       )}
 
       {/* Results Info */}
       {pagination.totalProducts !== undefined && (
-        <div className="flex items-center justify-between">
-          <p className="text-sm text-gray-600">
-            Showing <span className="font-semibold">{products.length}</span> of <span className="font-semibold">{pagination.totalProducts}</span> products
-          </p>
+        <div className="mb-4 text-gray-600">
+          Showing {products.length} of {pagination.totalProducts} products
         </div>
       )}
 
       {/* Products Table */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+      <div className="bg-white rounded-lg shadow-md overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead className="bg-gray-50 border-b border-gray-200">
-              <tr>
-                <th className="py-3 px-6 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Image</th>
-                <th className="py-3 px-6 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Product</th>
-                <th className="py-3 px-6 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">SKU</th>
-                <th className="py-3 px-6 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Category</th>
-                <th className="py-3 px-6 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider">Price</th>
-                <th className="py-3 px-6 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider">Stock</th>
-                <th className="py-3 px-6 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider">Status</th>
-                <th className="py-3 px-6 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider">Actions</th>
+          <table className="w-full table-auto">
+            <thead>
+              <tr className="bg-gray-200 text-gray-600 uppercase text-sm leading-normal">
+                <th className="py-3 px-6 text-left">Image</th>
+                <th className="py-3 px-6 text-left">Name</th>
+                <th className="py-3 px-6 text-left">SKU</th>
+                <th className="py-3 px-6 text-left">Category</th>
+                <th className="py-3 px-6 text-center">Price</th>
+                <th className="py-3 px-6 text-center">Stock</th>
+                <th className="py-3 px-6 text-center">Status</th>
+                <th className="py-3 px-6 text-center">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-200">
+            <tbody className="text-gray-600 text-sm font-light">
               {products.map((product) => (
-                <tr key={product._id} className="hover:bg-gray-50 transition-colors">
-                  <td className="py-4 px-6">
-                    {product.images?.[0] ? (
-                      <img
-                        src={product.images[0]}
-                        alt={product.name}
-                        className="w-14 h-14 object-cover rounded-lg border border-gray-200"
-                      />
-                    ) : (
-                      <div className="w-14 h-14 bg-gray-100 rounded-lg flex items-center justify-center border border-gray-200">
-                        <svg className="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                        </svg>
+                <tr key={product._id} className="border-b border-gray-200 hover:bg-gray-100">
+                  <td className="py-3 px-6">
+                    <img
+                      src={product.images?.[0] || '/placeholder-product.png'}
+                      alt={product.name}
+                      className="w-12 h-12 object-cover rounded"
+                    />
+                  </td>
+                  <td className="py-3 px-6 text-left whitespace-nowrap font-medium">
+                    {product.name}
+                  </td>
+                  <td className="py-3 px-6 text-left">{product.sku}</td>
+                  <td className="py-3 px-6 text-left">{product.category?.name || 'N/A'}</td>
+                  <td className="py-3 px-6 text-center">
+                    ${product.price.toFixed(2)}
+                    {product.salePrice && (
+                      <div className="text-xs text-green-600">
+                        Sale: ${product.salePrice.toFixed(2)}
                       </div>
                     )}
                   </td>
-                  <td className="py-4 px-6">
-                    <p className="font-medium text-gray-800">{product.name}</p>
-                  </td>
-                  <td className="py-4 px-6">
-                    <span className="font-mono text-sm text-gray-600">{product.sku}</span>
-                  </td>
-                  <td className="py-4 px-6">
-                    <span className="text-sm text-gray-700">{product.category?.name || 'N/A'}</span>
-                  </td>
-                  <td className="py-4 px-6 text-center">
-                    <div>
-                      <p className="font-semibold text-gray-800">${product.price.toFixed(2)}</p>
-                      {product.salePrice && (
-                        <p className="text-xs text-green-600 font-medium">
-                          Sale: ${product.salePrice.toFixed(2)}
-                        </p>
-                      )}
-                    </div>
-                  </td>
-                  <td className="py-4 px-6 text-center">
-                    <span className={`px-3 py-1 rounded-full text-sm font-medium ${
-                      product.stockQuantity > 10 
-                        ? 'bg-green-100 text-green-700'
-                        : product.stockQuantity > 0
-                        ? 'bg-yellow-100 text-yellow-700'
-                        : 'bg-red-100 text-red-700'
-                    }`}>
-                      {product.stockQuantity}
-                    </span>
-                  </td>
-                  <td className="py-4 px-6 text-center">
-                    <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
-                      product.inStock 
-                        ? 'bg-green-100 text-green-700' 
-                        : 'bg-red-100 text-red-700'
+                  <td className="py-3 px-6 text-center">{product.stockQuantity}</td>
+                  <td className="py-3 px-6 text-center">
+                    <span className={`px-2 py-1 rounded-full text-xs ${
+                      product.inStock ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
                     }`}>
                       {product.inStock ? 'In Stock' : 'Out of Stock'}
                     </span>
                   </td>
-                  <td className="py-4 px-6">
-                    <div className="flex items-center justify-center gap-2">
+                  <td className="py-3 px-6 text-center">
+                    <div className="flex item-center justify-center gap-2">
                       <Link
                         to={`/dashboard/products/edit/${product._id}`}
-                        className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                        title="Edit"
+                        className="text-blue-600 hover:text-blue-800 font-medium"
                       >
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                        </svg>
+                        Edit
                       </Link>
                       <button
                         onClick={() => handleDelete(product._id)}
-                        className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                        title="Delete"
+                        className="text-red-600 hover:text-red-800 font-medium"
                       >
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                        </svg>
+                        Delete
                       </button>
                     </div>
                   </td>
@@ -325,20 +419,133 @@ const ProductsPage = () => {
               ))}
             </tbody>
           </table>
-
-          {products.length === 0 && !loading && (
-            <div className="text-center py-16">
-              <svg className="w-16 h-16 mx-auto text-gray-300 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
-              </svg>
-              <p className="text-gray-500 font-medium">No products found</p>
-              <p className="text-sm text-gray-400 mt-1">Try adjusting your filters or add a new product</p>
-            </div>
-          )}
         </div>
+
+        {products.length === 0 && !loading && (
+          <div className="text-center py-12 text-gray-500">
+            No products found. Try adjusting your filters.
+          </div>
+        )}
       </div>
 
-      {/* Continue with rest of the component... pagination, modals, etc. */}
+      {/* Pagination */}
+      {pagination.totalPages > 1 && (
+        <div className="flex justify-center items-center gap-2 mt-6">
+          <button
+            onClick={() => handlePageChange(pagination.currentPage - 1)}
+            disabled={!pagination.hasPrev}
+            className="px-4 py-2 bg-white border rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+          >
+            Previous
+          </button>
+          
+          <div className="flex gap-1">
+            {[...Array(pagination.totalPages)].map((_, index) => {
+              const page = index + 1;
+              const showPage = 
+                page === 1 ||
+                page === pagination.totalPages ||
+                (page >= pagination.currentPage - 1 && page <= pagination.currentPage + 1);
+              
+              if (!showPage && page === 2) {
+                return <span key={page} className="px-3 py-2">...</span>;
+              }
+              
+              if (!showPage && page === pagination.totalPages - 1) {
+                return <span key={page} className="px-3 py-2">...</span>;
+              }
+              
+              if (!showPage) return null;
+              
+              return (
+                <button
+                  key={page}
+                  onClick={() => handlePageChange(page)}
+                  className={`px-4 py-2 border rounded-lg ${
+                    pagination.currentPage === page
+                      ? 'bg-indigo-600 text-white'
+                      : 'bg-white hover:bg-gray-50'
+                  }`}
+                >
+                  {page}
+                </button>
+              );
+            })}
+          </div>
+          
+          <button
+            onClick={() => handlePageChange(pagination.currentPage + 1)}
+            disabled={!pagination.hasNext}
+            className="px-4 py-2 bg-white border rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+          >
+            Next
+          </button>
+        </div>
+      )}
+
+      {/* Bulk Import Modal */}
+      {showImportModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-8 max-w-md w-full">
+            <h2 className="text-2xl font-bold mb-4">Bulk Import Products</h2>
+            
+            <div className="mb-4">
+              <p className="text-gray-600 mb-2">
+                Upload a CSV file to import multiple products at once.
+              </p>
+              <button
+                onClick={downloadTemplate}
+                className="text-indigo-600 hover:text-indigo-700 text-sm font-medium"
+              >
+                Download CSV Template
+              </button>
+            </div>
+
+            <div className="mb-4">
+              <label className="block text-gray-700 font-medium mb-2">
+                Select CSV File
+              </label>
+              <input
+                type="file"
+                accept=".csv"
+                onChange={handleImportFile}
+                className="w-full px-3 py-2 border rounded-lg"
+              />
+              {importFile && (
+                <p className="text-sm text-gray-600 mt-2">
+                  Selected: {importFile.name}
+                </p>
+              )}
+            </div>
+
+            {importError && (
+              <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+                <p className="text-red-600 text-sm">{importError}</p>
+              </div>
+            )}
+
+            <div className="flex gap-2">
+              <button
+                onClick={handleBulkImport}
+                disabled={!importFile || importing}
+                className="flex-1 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
+              >
+                {importing ? 'Importing...' : 'Import'}
+              </button>
+              <button
+                onClick={() => {
+                  setShowImportModal(false);
+                  setImportFile(null);
+                  setImportError(null);
+                }}
+                className="flex-1 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

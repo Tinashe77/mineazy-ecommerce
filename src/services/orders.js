@@ -42,7 +42,7 @@ export const createOrder = async (orderData, token = null) => {
 export const getUserOrders = async (token, params = {}) => {
   try {
     const queryString = new URLSearchParams(params).toString();
-    const response = await fetch(`${API_URL}${queryString ? `?${queryString}` : ''}`, {
+    const response = await fetch(`${ADMIN_URL}${queryString ? `?${queryString}` : ''}`, {
       method: 'GET',
       headers: {
         'Authorization': `Bearer ${token}`,
