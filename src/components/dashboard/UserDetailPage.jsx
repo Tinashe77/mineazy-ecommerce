@@ -211,7 +211,7 @@ const UserDetailPage = () => {
                       value={formData.firstName}
                       onChange={handleChange}
                       required
-                      className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500"
+                      className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 text-gray-700"
                     />
                   </div>
 
@@ -225,7 +225,7 @@ const UserDetailPage = () => {
                       value={formData.lastName}
                       onChange={handleChange}
                       required
-                      className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500"
+                      className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 text-gray-700"
                     />
                   </div>
 
@@ -239,7 +239,7 @@ const UserDetailPage = () => {
                       value={formData.email}
                       onChange={handleChange}
                       required
-                      className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500"
+                      className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 text-gray-700"
                     />
                   </div>
 
@@ -252,7 +252,7 @@ const UserDetailPage = () => {
                       name="phone"
                       value={formData.phone}
                       onChange={handleChange}
-                      className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500"
+                      className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 text-gray-700"
                     />
                   </div>
 
@@ -265,10 +265,10 @@ const UserDetailPage = () => {
                       value={formData.role}
                       onChange={handleChange}
                       required
-                      className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500"
+                      className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 text-gray-700"
                     >
                       <option value="customer">Customer</option>
-<option value="business">Business</option>
+                      <option value="business">Business</option>
                       <option value="sales_rep">Sales Rep</option>
                       <option value="content_manager">Content Manager</option>
                       <option value="inventory_manager">Inventory Manager</option>
@@ -286,7 +286,7 @@ const UserDetailPage = () => {
                       name="company"
                       value={formData.company}
                       onChange={handleChange}
-                      className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500"
+                      className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 text-gray-700"
                     />
                   </div>
                 </div>
