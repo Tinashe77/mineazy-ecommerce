@@ -2,6 +2,9 @@ import { useState, useEffect, useContext } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { AuthContext } from '../../context/AuthContext';
 import { createBlogPost, updateBlogPost, getBlogPosts, getBlogCategories } from '../../services/blog';
+import ReactQuill from 'react-quill';
+import 'react-quill/dist/quill.snow.css';
+
 
 const BlogPostForm = () => {
   const { id } = useParams();
@@ -19,12 +22,45 @@ const BlogPostForm = () => {
     metaTitle: '',
     metaDescription: '',
   });
-  
+  // Configure toolbar modules
+const quillModules = {
+  toolbar: [
+    [{ 'header': [1, 2, 3, false] }],
+    ['bold', 'italic', 'underline', 'strike'],
+    [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+    [{ 'color': [] }, { 'background': [] }],
+    [{ 'align': [] }],
+    ['link', 'image', 'video'],
+    ['clean']
+  ],
+};
+
+const quillFormats = [
+  'header',
+  'bold', 'italic', 'underline', 'strike',
+  'list', 'bullet',
+  'color', 'background',
+  'align',
+  'link', 'image', 'video'
+];
+
+// Then use it in the editor section:
+<ReactQuill
+  theme="snow"
+  value={formData.content}
+  onChange={(value) => handleChange('content', value)}
+  modules={quillModules}
+  formats={quillFormats}
+  className="bg-white"
+  style={{ minHeight: '400px' }}
+/>
   const [featuredImage, setFeaturedImage] = useState(null);
+  const [imagePreview, setImagePreview] = useState('');
   const [existingImage, setExistingImage] = useState('');
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [showSidebar, setShowSidebar] = useState(true);
 
   useEffect(() => {
     fetchCategories();
@@ -36,11 +72,15 @@ const BlogPostForm = () => {
   const fetchCategories = async () => {
     try {
       const response = await getBlogCategories();
-      if (response.categories) {
+      // FIX: The backend returns the array directly, not wrapped in an object
+      if (Array.isArray(response)) {
+        setCategories(response);
+      } else if (response.categories) {
         setCategories(response.categories);
       }
     } catch (err) {
       console.error('Failed to fetch categories', err);
+      setError('Failed to load categories');
     }
   };
 
@@ -61,7 +101,10 @@ const BlogPostForm = () => {
           metaTitle: post.metaTitle || '',
           metaDescription: post.metaDescription || '',
         });
-        setExistingImage(post.featuredImage || '');
+        if (post.featuredImage) {
+          setExistingImage(post.featuredImage);
+          setImagePreview(post.featuredImage);
+        }
       }
     } catch (err) {
       setError('Failed to fetch post data.');
@@ -70,8 +113,7 @@ const BlogPostForm = () => {
     }
   };
 
-  const handleChange = (e) => {
-    const { name, value } = e.target;
+  const handleChange = (name, value) => {
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
@@ -79,11 +121,21 @@ const BlogPostForm = () => {
     const file = e.target.files[0];
     if (file) {
       setFeaturedImage(file);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setImagePreview(reader.result);
+      };
+      reader.readAsDataURL(file);
     }
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  const removeImage = () => {
+    setFeaturedImage(null);
+    setImagePreview('');
+    setExistingImage('');
+  };
+
+  const handleSubmit = async (status) => {
     setLoading(true);
     setError(null);
 
@@ -91,10 +143,13 @@ const BlogPostForm = () => {
     
     // Append form fields
     Object.keys(formData).forEach(key => {
-      if (formData[key]) {
+      if (formData[key] !== '' && formData[key] !== null) {
         postData.append(key, formData[key]);
       }
     });
+    
+    // Override status with the one passed to the function
+    postData.set('status', status);
     
     // Append image if selected
     if (featuredImage) {
@@ -122,207 +177,289 @@ const BlogPostForm = () => {
   };
 
   if (loading && isEditMode && !formData.title) {
-    return <div className="text-center py-12">Loading post...</div>;
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <div className="text-center">
+          <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+          <p className="mt-4 text-gray-600">Loading post...</p>
+        </div>
+      </div>
+    );
   }
 
   return (
-    <div>
-      <h1 className="text-3xl font-bold text-gray-800 mb-6">
-        {isEditMode ? 'Edit Blog Post' : 'Create New Post'}
-      </h1>
-      
-      <form onSubmit={handleSubmit} className="bg-white p-8 rounded-lg shadow-md">
-        <div className="space-y-6">
-          <div>
-            <label className="block text-gray-700 font-medium mb-2">
-              Title *
-            </label>
-            <input
-              type="text"
-              name="title"
-              value={formData.title}
-              onChange={handleChange}
-              placeholder="Enter post title"
-              required
-              className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500"
-            />
-          </div>
-
-          <div>
-            <label className="block text-gray-700 font-medium mb-2">
-              Excerpt
-            </label>
-            <textarea
-              name="excerpt"
-              value={formData.excerpt}
-              onChange={handleChange}
-              rows={3}
-              placeholder="Brief description of the post"
-              className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500"
-            />
-          </div>
-          
-          <div>
-            <label className="block text-gray-700 font-medium mb-2">
-              Content *
-            </label>
-            <textarea
-              name="content"
-              value={formData.content}
-              onChange={handleChange}
-              rows={15}
-              placeholder="Write your post content here..."
-              required
-              className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 font-mono text-sm"
-            />
-            <p className="text-sm text-gray-500 mt-1">
-              Supports Markdown formatting
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-              <label className="block text-gray-700 font-medium mb-2">
-                Category
-              </label>
-              <select
-                name="category"
-                value={formData.category}
-                onChange={handleChange}
-                className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500"
+    <div className="min-h-screen bg-gray-50">
+      {/* Top Bar */}
+      <div className="bg-white border-b border-gray-200 sticky top-0 z-50 shadow-sm">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between h-16">
+            <div className="flex items-center gap-4">
+              <h1 className="text-xl font-semibold text-gray-900">
+                {isEditMode ? 'Edit Post' : 'Add New Post'}
+              </h1>
+              <button
+                type="button"
+                onClick={() => setShowSidebar(!showSidebar)}
+                className="lg:hidden p-2 text-gray-600 hover:bg-gray-100 rounded"
               >
-                <option value="">Select a category</option>
-                {categories.map((cat) => (
-                  <option key={cat._id} value={cat._id}>
-                    {cat.name}
-                  </option>
-                ))}
-              </select>
+                ⚙️
+              </button>
             </div>
-
-            <div>
-              <label className="block text-gray-700 font-medium mb-2">
-                Status *
-              </label>
-              <select
-                name="status"
-                value={formData.status}
-                onChange={handleChange}
-                required
-                className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500"
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={() => navigate('/dashboard/blog')}
+                className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg"
               >
-                <option value="draft">Draft</option>
-                <option value="published">Published</option>
-                <option value="archived">Archived</option>
-              </select>
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => handleSubmit('draft')}
+                disabled={loading}
+                className="px-4 py-2 text-gray-700 border border-gray-300 hover:bg-gray-50 rounded-lg disabled:opacity-50"
+              >
+                {loading ? 'Saving...' : 'Save Draft'}
+              </button>
+              <button
+                type="button"
+                onClick={() => handleSubmit('published')}
+                disabled={loading}
+                className="px-6 py-2 bg-blue-600 text-white hover:bg-blue-700 rounded-lg flex items-center gap-2 font-medium disabled:opacity-50"
+              >
+                💾
+                {loading ? 'Publishing...' : 'Publish'}
+              </button>
             </div>
           </div>
+        </div>
+      </div>
 
-          <div>
-            <label className="block text-gray-700 font-medium mb-2">
-              Tags (comma-separated)
-            </label>
-            <input
-              type="text"
-              name="tags"
-              value={formData.tags}
-              onChange={handleChange}
-              placeholder="mining, equipment, industry, tips"
-              className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500"
-            />
+      {/* Error Alert */}
+      {error && (
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-4">
+          <div className="bg-red-50 border-l-4 border-red-500 p-4 rounded">
+            <p className="text-red-700">{error}</p>
           </div>
+        </div>
+      )}
 
-          <div>
-            <label className="block text-gray-700 font-medium mb-2">
-              Featured Image
-            </label>
-            {existingImage && (
-              <div className="mb-3">
-                <p className="text-sm text-gray-600 mb-2">Current image:</p>
-                <img 
-                  src={existingImage} 
-                  alt="Current featured" 
-                  className="w-full max-w-md h-48 object-cover rounded border"
-                />
-              </div>
-            )}
-            <input
-              type="file"
-              accept="image/*"
-              onChange={handleImageChange}
-              className="w-full"
-            />
-            <p className="text-sm text-gray-500 mt-1">
-              Recommended size: 1200x630px
-            </p>
-          </div>
-
-          <div className="border-t pt-6">
-            <h3 className="text-lg font-semibold mb-4">SEO Settings</h3>
-            
-            <div className="space-y-4">
-              <div>
-                <label className="block text-gray-700 font-medium mb-2">
-                  Meta Title
-                </label>
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="flex gap-8">
+          {/* Main Content Area */}
+          <div className="flex-1 min-w-0">
+            <div className="bg-white rounded-lg shadow-sm border border-gray-200">
+              {/* Title Input */}
+              <div className="p-6 border-b border-gray-200">
                 <input
                   type="text"
-                  name="metaTitle"
-                  value={formData.metaTitle}
-                  onChange={handleChange}
-                  placeholder="SEO title for search engines"
-                  maxLength={60}
-                  className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500"
+                  value={formData.title}
+                  onChange={(e) => handleChange('title', e.target.value)}
+                  placeholder="Add title"
+                  required
+                  className="w-full text-3xl font-bold text-gray-900 placeholder-gray-400 border-0 focus:ring-0 p-0"
+                  style={{ outline: 'none', boxShadow: 'none' }}
                 />
-                <p className="text-sm text-gray-500 mt-1">
-                  {formData.metaTitle.length}/60 characters
+              </div>
+
+              {/* Featured Image Section */}
+              <div className="p-6 border-b border-gray-200">
+                {imagePreview ? (
+                  <div className="relative">
+                    <img
+                      src={imagePreview}
+                      alt="Featured"
+                      className="w-full max-h-96 object-cover rounded-lg"
+                    />
+                    <button
+                      type="button"
+                      onClick={removeImage}
+                      className="absolute top-2 right-2 p-2 bg-red-600 text-white rounded-full hover:bg-red-700 shadow-lg"
+                    >
+                      ❌
+                    </button>
+                  </div>
+                ) : (
+                  <label className="flex flex-col items-center justify-center w-full h-48 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50 transition-colors">
+                    <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                      <div className="w-12 h-12 text-gray-400 mb-3 text-4xl">🖼️</div>
+                      <p className="mb-2 text-sm text-gray-600">
+                        <span className="font-semibold">Click to upload</span> featured image
+                      </p>
+                      <p className="text-xs text-gray-500">PNG, JPG, GIF up to 5MB (1200x630px recommended)</p>
+                    </div>
+                    <input
+                      type="file"
+                      className="hidden"
+                      accept="image/*"
+                      onChange={handleImageChange}
+                    />
+                  </label>
+                )}
+              </div>
+
+              {/* Content Editor */}
+              <div className="p-6">
+                <ReactQuill
+  theme="snow"
+  value={formData.content}
+  onChange={(value) => handleChange('content', value)}
+  modules={quillModules}
+  formats={quillFormats}
+  className="bg-white"
+  style={{ minHeight: '400px' }}
+/>
+                <p className="text-sm text-gray-500 mt-2">
+                  💡 Tip: Install react-quill for full WYSIWYG editor with formatting options
                 </p>
               </div>
 
-              <div>
-                <label className="block text-gray-700 font-medium mb-2">
-                  Meta Description
-                </label>
-                <textarea
-                  name="metaDescription"
-                  value={formData.metaDescription}
-                  onChange={handleChange}
-                  rows={3}
-                  placeholder="SEO description for search engines"
-                  maxLength={160}
-                  className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500"
-                />
-                <p className="text-sm text-gray-500 mt-1">
-                  {formData.metaDescription.length}/160 characters
-                </p>
+              {/* Excerpt */}
+              <div className="p-6 border-t border-gray-200">
+                <details className="group">
+                  <summary className="cursor-pointer text-gray-700 font-medium flex items-center justify-between hover:text-gray-900">
+                    <span>Excerpt</span>
+                    <span className="text-gray-400 group-open:rotate-180 transition-transform">▼</span>
+                  </summary>
+                  <div className="mt-4">
+                    <textarea
+                      value={formData.excerpt}
+                      onChange={(e) => handleChange('excerpt', e.target.value)}
+                      rows={3}
+                      placeholder="Write an excerpt (optional)"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    />
+                    <p className="text-sm text-gray-500 mt-2">
+                      Brief description for archives and search results
+                    </p>
+                  </div>
+                </details>
               </div>
             </div>
           </div>
-        </div>
-        
-        {error && (
-          <div className="mt-6 p-3 bg-red-50 border border-red-200 rounded-lg">
-            <p className="text-red-600">{error}</p>
+
+          {/* Sidebar */}
+          <div className={`w-80 space-y-6 ${showSidebar ? 'block' : 'hidden lg:block'}`}>
+            {/* Publish Box */}
+            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+              <h3 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                ⚙️ Publish
+              </h3>
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Status
+                  </label>
+                  <select
+                    value={formData.status}
+                    onChange={(e) => handleChange('status', e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm"
+                  >
+                    <option value="draft">Draft</option>
+                    <option value="published">Published</option>
+                    <option value="archived">Archived</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            {/* Categories */}
+            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+              <h3 className="font-semibold text-gray-900 mb-4">Categories</h3>
+              {categories.length === 0 ? (
+                <p className="text-sm text-gray-500 mb-3">No categories available</p>
+              ) : (
+                <div className="space-y-2 max-h-48 overflow-y-auto">
+                  {categories.map((cat) => (
+                    <label key={cat._id} className="flex items-center gap-2 cursor-pointer hover:bg-gray-50 p-2 rounded">
+                      <input
+                        type="radio"
+                        name="category"
+                        value={cat._id}
+                        checked={formData.category === cat._id}
+                        onChange={(e) => handleChange('category', e.target.value)}
+                        className="w-4 h-4 text-blue-600 focus:ring-blue-500"
+                      />
+                      <span className="text-sm text-gray-700">{cat.name}</span>
+                      {cat.postCount !== undefined && (
+                        <span className="text-xs text-gray-400 ml-auto">({cat.postCount})</span>
+                      )}
+                    </label>
+                  ))}
+                </div>
+              )}
+              <button
+                type="button"
+                onClick={() => navigate('/dashboard/blog/categories')}
+                className="mt-3 text-sm text-blue-600 hover:text-blue-700 font-medium"
+              >
+                + Add New Category
+              </button>
+            </div>
+
+            {/* Tags */}
+            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+              <h3 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                🏷️ Tags
+              </h3>
+              <input
+                type="text"
+                value={formData.tags}
+                onChange={(e) => handleChange('tags', e.target.value)}
+                placeholder="mining, equipment, industry"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm"
+              />
+              <p className="text-xs text-gray-500 mt-2">
+                Separate tags with commas
+              </p>
+            </div>
+
+            {/* SEO Settings */}
+            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+              <details className="group">
+                <summary className="cursor-pointer font-semibold text-gray-900 flex items-center justify-between hover:text-gray-700">
+                  <span>SEO Settings</span>
+                  <span className="text-gray-400 group-open:rotate-180 transition-transform">▼</span>
+                </summary>
+                <div className="mt-4 space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Meta Title
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.metaTitle}
+                      onChange={(e) => handleChange('metaTitle', e.target.value)}
+                      maxLength={60}
+                      placeholder="SEO title"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm"
+                    />
+                    <p className="text-xs text-gray-500 mt-1">
+                      {formData.metaTitle.length}/60 characters
+                    </p>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Meta Description
+                    </label>
+                    <textarea
+                      value={formData.metaDescription}
+                      onChange={(e) => handleChange('metaDescription', e.target.value)}
+                      maxLength={160}
+                      rows={3}
+                      placeholder="SEO description"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm"
+                    />
+                    <p className="text-xs text-gray-500 mt-1">
+                      {formData.metaDescription.length}/160 characters
+                    </p>
+                  </div>
+                </div>
+              </details>
+            </div>
           </div>
-        )}
-        
-        <div className="mt-6 flex gap-3">
-          <button
-            type="submit"
-            disabled={loading}
-            className="px-6 py-2 text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
-          >
-            {loading ? 'Saving...' : isEditMode ? 'Update Post' : 'Create Post'}
-          </button>
-          <button
-            type="button"
-            onClick={() => navigate('/dashboard/blog')}
-            className="px-6 py-2 text-gray-700 bg-gray-200 rounded-lg hover:bg-gray-300"
-          >
-            Cancel
-          </button>
         </div>
-      </form>
+      </div>
     </div>
   );
 };
