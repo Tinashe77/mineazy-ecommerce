@@ -188,34 +188,7 @@ const CategoriesPage = () => {
         </Link>
       </div>
 
-      {/* View Mode Toggle */}
-      <div className="bg-white rounded-lg shadow-md p-4 mb-6">
-        <div className="flex items-center gap-4">
-          <span className="text-sm font-medium text-gray-700">View Mode:</span>
-          <div className="flex gap-2">
-            <button
-              onClick={() => handleViewModeChange('list')}
-              className={`px-4 py-2 rounded-lg text-sm font-medium ${
-                viewMode === 'list'
-                  ? 'bg-indigo-600 text-white'
-                  : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-              }`}
-            >
-              List View
-            </button>
-            <button
-              onClick={() => handleViewModeChange('tree')}
-              className={`px-4 py-2 rounded-lg text-sm font-medium ${
-                viewMode === 'tree'
-                  ? 'bg-indigo-600 text-white'
-                  : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-              }`}
-            >
-              Tree View
-            </button>
-          </div>
-        </div>
-      </div>
+      
 
       {/* Filters - Only show in list view */}
       {viewMode === 'list' && (

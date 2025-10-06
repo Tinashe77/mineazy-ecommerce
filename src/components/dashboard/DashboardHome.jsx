@@ -300,51 +300,7 @@ const DashboardHome = () => {
           </div>
         )}
 
-        {/* Top Products */}
-        {stats?.topProducts && stats.topProducts.length > 0 && (
-          <div className="lg:col-span-2 bg-white rounded-2xl p-6 border border-gray-100 shadow-sm">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-gray-800">Top Selling Products</h3>
-              <Link to="/dashboard/products" className="text-sm text-primary-700 hover:text-primary-800 font-medium">
-                View All →
-              </Link>
-            </div>
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr className="text-left text-sm text-gray-500 border-b">
-                    <th className="pb-3 font-medium">Product</th>
-                    <th className="pb-3 font-medium">SKU</th>
-                    <th className="pb-3 font-medium">Stock</th>
-                    <th className="pb-3 font-medium">Revenue</th>
-                    <th className="pb-3 font-medium">Sold</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {stats.topProducts.slice(0, 5).map((product) => (
-                    <tr key={product._id} className="border-b last:border-0">
-                      <td className="py-3">
-                        <p className="text-sm font-medium text-gray-800">{product.name}</p>
-                      </td>
-                      <td className="py-3 text-sm text-gray-600">{product.sku}</td>
-                      <td className="py-3">
-                        <span className={`inline-flex px-2 py-1 rounded-lg text-xs font-medium ${
-                          (product.stockQuantity || 0) > 10 
-                            ? 'bg-green-100 text-green-700' 
-                            : 'bg-red-100 text-red-700'
-                        }`}>
-                          {product.stockQuantity || 0}
-                        </span>
-                      </td>
-                      <td className="py-3 text-sm text-gray-800">{formatCurrency(product.totalRevenue || 0)}</td>
-                      <td className="py-3 text-sm font-semibold text-green-600">{product.totalSold || 0}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        )}
+        
       </div>      {/* Additional Stats Section */}
       {stats && (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
