@@ -4,7 +4,6 @@ import { AuthContext } from '../../context/AuthContext';
 import { getOrderById, updateOrderStatus } from '../../services/orders';
 import { downloadInvoice, sendInvoice } from '../../services/invoices';
 
-
 const OrderDetailPage = () => {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -50,40 +49,42 @@ const OrderDetailPage = () => {
       setLoading(false);
     }
   };
-const handleDownloadInvoice = async () => {
-  try {
-    const blob = await downloadInvoice(token, id);
-    
-    if (blob) {
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `invoice-${order.orderNumber}.pdf`;
-      a.click();
-      window.URL.revokeObjectURL(url);
-    } else {
-      alert('Failed to generate invoice');
-    }
-  } catch (err) {
-    alert('Failed to download invoice: ' + err.message);
-  }
-};
 
-const handleSendInvoice = async () => {
-  if (window.confirm('Send invoice to customer via email?')) {
+  const handleDownloadInvoice = async () => {
     try {
-      const response = await sendInvoice(token, id);
+      const blob = await downloadInvoice(token, id);
       
-      if (response.success !== false) {
-        alert('Invoice sent successfully');
+      if (blob) {
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `invoice-${order.orderNumber}.pdf`;
+        a.click();
+        window.URL.revokeObjectURL(url);
       } else {
-        alert('Failed to send invoice: ' + response.message);
+        alert('Failed to generate invoice');
       }
     } catch (err) {
-      alert('Failed to send invoice: ' + err.message);
+      alert('Failed to download invoice: ' + err.message);
     }
-  }
-};
+  };
+
+  const handleSendInvoice = async () => {
+    if (window.confirm('Send invoice to customer via email?')) {
+      try {
+        const response = await sendInvoice(token, id);
+        
+        if (response.success !== false) {
+          alert('Invoice sent successfully');
+        } else {
+          alert('Failed to send invoice: ' + response.message);
+        }
+      } catch (err) {
+        alert('Failed to send invoice: ' + err.message);
+      }
+    }
+  };
+
   const handleUpdateChange = (e) => {
     const { name, value } = e.target;
     setUpdateData(prev => ({ ...prev, [name]: value }));
@@ -172,26 +173,27 @@ const handleSendInvoice = async () => {
           </h1>
         </div>
       </div>
-      <div className="flex gap-2">
-  <button
-    onClick={handleDownloadInvoice}
-    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2"
-  >
-    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-    </svg>
-    Download Invoice
-  </button>
-  <button
-    onClick={handleSendInvoice}
-    className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 flex items-center gap-2"
-  >
-    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-    </svg>
-    Send Invoice
-  </button>
-</div>
+      
+      <div className="flex gap-2 mb-6">
+        <button
+          onClick={handleDownloadInvoice}
+          className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2"
+        >
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+          </svg>
+          Download Invoice
+        </button>
+        <button
+          onClick={handleSendInvoice}
+          className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 flex items-center gap-2"
+        >
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+          </svg>
+          Send Invoice
+        </button>
+      </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Order Details */}
@@ -283,7 +285,7 @@ const handleSendInvoice = async () => {
                   name="status"
                   value={updateData.status}
                   onChange={handleUpdateChange}
-                  className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500"
+                  className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 text-gray-700"
                 >
                   <option value="pending">Pending</option>
                   <option value="processing">Processing</option>
@@ -301,7 +303,7 @@ const handleSendInvoice = async () => {
                   name="paymentStatus"
                   value={updateData.paymentStatus}
                   onChange={handleUpdateChange}
-                  className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500"
+                  className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 text-gray-700"
                 >
                   <option value="pending">Pending</option>
                   <option value="paid">Paid</option>
@@ -321,7 +323,7 @@ const handleSendInvoice = async () => {
                   value={updateData.trackingNumber}
                   onChange={handleUpdateChange}
                   placeholder="e.g., TRACK123456"
-                  className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500"
+                  className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 text-gray-700"
                 />
               </div>
 
@@ -335,7 +337,7 @@ const handleSendInvoice = async () => {
                   onChange={handleUpdateChange}
                   rows={3}
                   placeholder="Add notes about this order..."
-                  className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500"
+                  className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 text-gray-700"
                 />
               </div>
 

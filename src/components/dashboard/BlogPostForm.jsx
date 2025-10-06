@@ -5,7 +5,6 @@ import { createBlogPost, updateBlogPost, getBlogPosts, getBlogCategories } from 
 import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
 
-
 const BlogPostForm = () => {
   const { id } = useParams();
   const isEditMode = Boolean(id);
@@ -22,38 +21,7 @@ const BlogPostForm = () => {
     metaTitle: '',
     metaDescription: '',
   });
-  // Configure toolbar modules
-const quillModules = {
-  toolbar: [
-    [{ 'header': [1, 2, 3, false] }],
-    ['bold', 'italic', 'underline', 'strike'],
-    [{ 'list': 'ordered'}, { 'list': 'bullet' }],
-    [{ 'color': [] }, { 'background': [] }],
-    [{ 'align': [] }],
-    ['link', 'image', 'video'],
-    ['clean']
-  ],
-};
 
-const quillFormats = [
-  'header',
-  'bold', 'italic', 'underline', 'strike',
-  'list', 'bullet',
-  'color', 'background',
-  'align',
-  'link', 'image', 'video'
-];
-
-// Then use it in the editor section:
-<ReactQuill
-  theme="snow"
-  value={formData.content}
-  onChange={(value) => handleChange('content', value)}
-  modules={quillModules}
-  formats={quillFormats}
-  className="bg-white"
-  style={{ minHeight: '400px' }}
-/>
   const [featuredImage, setFeaturedImage] = useState(null);
   const [imagePreview, setImagePreview] = useState('');
   const [existingImage, setExistingImage] = useState('');
@@ -61,6 +29,28 @@ const quillFormats = [
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [showSidebar, setShowSidebar] = useState(true);
+
+  // Configure toolbar modules
+  const quillModules = {
+    toolbar: [
+      [{ 'header': [1, 2, 3, false] }],
+      ['bold', 'italic', 'underline', 'strike'],
+      [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+      [{ 'color': [] }, { 'background': [] }],
+      [{ 'align': [] }],
+      ['link', 'image', 'video'],
+      ['clean']
+    ],
+  };
+
+  const quillFormats = [
+    'header',
+    'bold', 'italic', 'underline', 'strike',
+    'list', 'bullet',
+    'color', 'background',
+    'align',
+    'link', 'image', 'video'
+  ];
 
   useEffect(() => {
     fetchCategories();
@@ -72,7 +62,6 @@ const quillFormats = [
   const fetchCategories = async () => {
     try {
       const response = await getBlogCategories();
-      // FIX: The backend returns the array directly, not wrapped in an object
       if (Array.isArray(response)) {
         setCategories(response);
       } else if (response.categories) {
@@ -87,27 +76,45 @@ const quillFormats = [
   const fetchPost = async () => {
     setLoading(true);
     try {
-      const response = await getBlogPosts({ status: '' });
-      const post = response.posts?.find(p => p._id === id);
+      // Fetch all posts (draft, published, archived) by not passing status parameter
+      // The backend defaults to 'published' if status is provided, so we need to fetch without it
+      const draftPosts = await getBlogPosts({ status: 'draft' });
+      const publishedPosts = await getBlogPosts({ status: 'published' });
+      const archivedPosts = await getBlogPosts({ status: 'archived' });
+      
+      // Combine all posts
+      const allPosts = [
+        ...(draftPosts.posts || []),
+        ...(publishedPosts.posts || []),
+        ...(archivedPosts.posts || [])
+      ];
+      
+      const post = allPosts.find(p => p._id === id);
       
       if (post) {
+        // Populate form with post data
         setFormData({
           title: post.title || '',
           content: post.content || '',
           excerpt: post.excerpt || '',
-          category: post.category?._id || '',
-          tags: post.tags?.join(', ') || '',
+          category: post.category?._id || post.category || '',
+          tags: Array.isArray(post.tags) ? post.tags.join(', ') : (post.tags || ''),
           status: post.status || 'draft',
           metaTitle: post.metaTitle || '',
           metaDescription: post.metaDescription || '',
         });
+        
+        // Set featured image if exists
         if (post.featuredImage) {
           setExistingImage(post.featuredImage);
           setImagePreview(post.featuredImage);
         }
+      } else {
+        setError('Post not found');
       }
     } catch (err) {
-      setError('Failed to fetch post data.');
+      console.error('Error fetching post:', err);
+      setError('Failed to fetch post data: ' + err.message);
     } finally {
       setLoading(false);
     }
@@ -257,9 +264,38 @@ const quillFormats = [
                   onChange={(e) => handleChange('title', e.target.value)}
                   placeholder="Add title"
                   required
-                  className="w-full text-3xl font-bold text-gray-900 placeholder-gray-400 border-0 focus:ring-0 p-0"
+                  className="w-full text-3xl font-bold text-gray-500 placeholder-gray-400 border-0 focus:ring-0 p-0"
                   style={{ outline: 'none', boxShadow: 'none' }}
                 />
+              </div>
+ {/* Content Editor - INCREASED HEIGHT */}
+              <div className="p-6">
+                <style>{`
+                  .ql-editor {
+                    color: #6b7280 !important;
+                    font-size: 16px;
+                  }
+                  .ql-editor.ql-blank::before {
+                    color: #9ca3af !important;
+                  }
+                    .ql-container.ql-snow {
+    border: 1px solid #ccc;
+    min-height: 200px;
+}
+                `}</style>
+                <ReactQuill
+                  theme="snow"
+                  value={formData.content}
+                  onChange={(value) => handleChange('content', value)}
+                  modules={quillModules}
+                  formats={quillFormats}
+                  className="bg-white"
+                  style={{ minHeight: '200px' }}
+                  placeholder="Start writing your blog post..."
+                />
+                <p className="text-sm text-gray-500 mt-4">
+                  💡 Tip: Use the toolbar above for formatting options
+                </p>
               </div>
 
               {/* Featured Image Section */}
@@ -298,22 +334,7 @@ const quillFormats = [
                 )}
               </div>
 
-              {/* Content Editor */}
-              <div className="p-6">
-                <ReactQuill
-  theme="snow"
-  value={formData.content}
-  onChange={(value) => handleChange('content', value)}
-  modules={quillModules}
-  formats={quillFormats}
-  className="bg-white"
-  style={{ minHeight: '400px' }}
-/>
-                <p className="text-sm text-gray-500 mt-2">
-                  💡 Tip: Install react-quill for full WYSIWYG editor with formatting options
-                </p>
-              </div>
-
+             
               {/* Excerpt */}
               <div className="p-6 border-t border-gray-200">
                 <details className="group">
@@ -327,7 +348,7 @@ const quillFormats = [
                       onChange={(e) => handleChange('excerpt', e.target.value)}
                       rows={3}
                       placeholder="Write an excerpt (optional)"
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-500"
                     />
                     <p className="text-sm text-gray-500 mt-2">
                       Brief description for archives and search results
@@ -353,7 +374,7 @@ const quillFormats = [
                   <select
                     value={formData.status}
                     onChange={(e) => handleChange('status', e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm text-gray-500"
                   >
                     <option value="draft">Draft</option>
                     <option value="published">Published</option>
@@ -407,7 +428,7 @@ const quillFormats = [
                 value={formData.tags}
                 onChange={(e) => handleChange('tags', e.target.value)}
                 placeholder="mining, equipment, industry"
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm text-gray-500"
               />
               <p className="text-xs text-gray-500 mt-2">
                 Separate tags with commas
@@ -432,7 +453,7 @@ const quillFormats = [
                       onChange={(e) => handleChange('metaTitle', e.target.value)}
                       maxLength={60}
                       placeholder="SEO title"
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm text-gray-500"
                     />
                     <p className="text-xs text-gray-500 mt-1">
                       {formData.metaTitle.length}/60 characters
@@ -448,7 +469,7 @@ const quillFormats = [
                       maxLength={160}
                       rows={3}
                       placeholder="SEO description"
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-sm text-gray-500"
                     />
                     <p className="text-xs text-gray-500 mt-1">
                       {formData.metaDescription.length}/160 characters

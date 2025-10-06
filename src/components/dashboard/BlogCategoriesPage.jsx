@@ -29,9 +29,9 @@ const BlogCategoriesPage = () => {
     try {
       const response = await getBlogCategories();
       
-      if (response.categories) {
-        setCategories(response.categories);
-      } else {
+      if (Array.isArray(response)) {
+  setCategories(response);
+} else {
         setError('Failed to fetch categories');
       }
     } catch (err) {
