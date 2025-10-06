@@ -55,10 +55,9 @@ export const getUserOrders = async (token, params = {}) => {
   }
 };
 
-// FIXED: Get single order - Use admin endpoint for order details
+// Get single order - Use admin endpoint for order details
 export const getOrderById = async (token, id) => {
   try {
-    // Use admin endpoint to get full order details
     const response = await fetch(`${ADMIN_URL}/${id}`, {
       method: 'GET',
       headers: {
@@ -120,7 +119,7 @@ export const getAdminOrders = async (token, params = {}) => {
   }
 };
 
-// FIXED: Admin - Update order status - Use admin endpoint
+// Admin - Update order status
 export const updateOrderStatus = async (token, id, updateData) => {
   try {
     const response = await fetch(`${ADMIN_URL}/${id}`, {
