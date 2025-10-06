@@ -29,7 +29,7 @@ const VerifyEmail = () => {
 
   return (
     <div className="flex items-center justify-center py-12">
-      <div className="w-full max-w-md p-8 text-center bg-white rounded-lg shadow-md animate-fade-in">
+      <div className="form-container text-center animate-fade-in">
         <h2 className="text-2xl font-bold text-gray-800">Email Verification</h2>
         <div className="mt-6">
           {status === 'verifying' && <p className="text-gray-600">{message}</p>}
@@ -39,7 +39,7 @@ const VerifyEmail = () => {
         <div className="mt-8">
           <Link
             to="/login"
-            className="w-full py-2 text-white transition duration-150 ease-in-out bg-primary-700 rounded-md hover:bg-primary-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
+            className="form-button"
           >
             Proceed to Login
           </Link>

@@ -28,11 +28,11 @@ const ChangePassword = () => {
   };
 
   return (
-    <div className="w-full max-w-lg p-8 mx-auto mt-10 space-y-6 bg-white rounded-lg shadow-md">
+    <div className="form-container mx-auto mt-10">
       <h2 className="text-2xl font-bold text-gray-800">Change Password</h2>
       <form onSubmit={handleSubmit} className="space-y-6">
         <div>
-          <label className="text-sm font-medium text-gray-700">Current Password</label>
+          <label className="form-label">Current Password</label>
           <input
             type="password"
             name="currentPassword"
@@ -40,11 +40,11 @@ const ChangePassword = () => {
             placeholder="••••••••"
             onChange={handleChange}
             required
-            className="w-full px-3 py-2 mt-1 border border-gray-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500"
+            className="form-input"
           />
         </div>
         <div>
-          <label className="text-sm font-medium text-gray-700">New Password</label>
+          <label className="form-label">New Password</label>
           <input
             type="password"
             name="newPassword"
@@ -52,14 +52,14 @@ const ChangePassword = () => {
             placeholder="••••••••"
             onChange={handleChange}
             required
-            className="w-full px-3 py-2 mt-1 border border-gray-300 rounded-md shadow-sm focus:ring-primary-500 focus:border-primary-500"
+            className="form-input"
           />
         </div>
         {message && <p className="text-sm text-green-600">{message}</p>}
         {error && <p className="text-sm text-red-600">{error}</p>}
         <button
           type="submit"
-          className="w-full py-2 text-white transition duration-150 ease-in-out bg-primary-700 rounded-md hover:bg-primary-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
+          className="form-button"
         >
           Change Password
         </button>
