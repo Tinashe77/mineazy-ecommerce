@@ -2,7 +2,7 @@
 
 // Determine the API URL based on environment
 const API_BASE_URL = import.meta.env.MODE === 'production' 
-  ? 'https://mining-equipment-backend.onrender.com' 
+  ? 'https://mining-equipment-backend.onrender.com/' 
   : ''; // Empty string means use relative path (will be proxied)
 
 const API_URL = `${API_BASE_URL}/api/auth`;

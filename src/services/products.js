@@ -138,17 +138,16 @@ export const deleteProduct = async (token, id) => {
   }
 };
 
-// FIXED: CSV import with proper FormData
 export const bulkImportProducts = async (token, csvFile) => {
   try {
     const formData = new FormData();
-    formData.append('csv', csvFile); // Field name must match backend expectation
+    formData.append('csv', csvFile); // Field name MUST be 'csv'
     
     const response = await fetch(`${API_URL}/bulk-import`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${token}`,
-        // DO NOT set Content-Type for FormData
+        // CRITICAL: NO Content-Type header for FormData!
       },
       body: formData,
     });

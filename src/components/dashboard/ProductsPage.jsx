@@ -130,31 +130,43 @@ const ProductsPage = () => {
   };
 
   const handleBulkImport = async () => {
-    if (!importFile) {
-      setImportError('Please select a file');
-      return;
-    }
+  if (!importFile) {
+    setImportError('Please select a file');
+    return;
+  }
 
-    setImporting(true);
-    setImportError(null);
+  // Validate file type
+  if (!importFile.name.endsWith('.csv')) {
+    setImportError('Please select a CSV file');
+    return;
+  }
 
-    try {
-      const response = await bulkImportProducts(token, importFile);
-      
-      if (response.success !== false) {
-        alert(`Successfully imported products!`);
-        setShowImportModal(false);
-        setImportFile(null);
-        fetchProducts(1);
-      } else {
-        setImportError(response.message || 'Import failed');
-      }
-    } catch (error) {
-      setImportError('Import failed: ' + error.message);
-    } finally {
-      setImporting(false);
+  // Validate file size (optional, but good practice)
+  if (importFile.size > 10 * 1024 * 1024) { // 10MB max
+    setImportError('File size must be less than 10MB');
+    return;
+  }
+
+  setImporting(true);
+  setImportError(null);
+
+  try {
+    const response = await bulkImportProducts(token, importFile);
+    
+    if (response.success !== false && !response.errors) {
+      alert(`Successfully imported products!`);
+      setShowImportModal(false);
+      setImportFile(null);
+      fetchProducts(1);
+    } else {
+      setImportError(response.message || response.errors?.[0]?.msg || 'Import failed');
     }
-  };
+  } catch (error) {
+    setImportError('Import failed: ' + error.message);
+  } finally {
+    setImporting(false);
+  }
+};
 
   const downloadTemplate = () => {
     // Create CSV template
