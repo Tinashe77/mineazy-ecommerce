@@ -1,4 +1,4 @@
-// src/services/orders.js
+// src/services/orders.js - FIXED VERSION
 const API_BASE_URL = import.meta.env.MODE === 'production' 
   ? 'https://mining-equipment-backend.onrender.com' 
   : '';
@@ -55,10 +55,11 @@ export const getUserOrders = async (token, params = {}) => {
   }
 };
 
-// Get single order
+// FIXED: Get single order - Use admin endpoint for order details
 export const getOrderById = async (token, id) => {
   try {
-    const response = await fetch(`${API_URL}/${id}`, {
+    // Use admin endpoint to get full order details
+    const response = await fetch(`${ADMIN_URL}/${id}`, {
       method: 'GET',
       headers: {
         'Authorization': `Bearer ${token}`,
@@ -119,10 +120,10 @@ export const getAdminOrders = async (token, params = {}) => {
   }
 };
 
-// Admin - Update order status
+// FIXED: Admin - Update order status - Use admin endpoint
 export const updateOrderStatus = async (token, id, updateData) => {
   try {
-    const response = await fetch(`${API_URL}/${id}`, {
+    const response = await fetch(`${ADMIN_URL}/${id}`, {
       method: 'PUT',
       headers: {
         'Authorization': `Bearer ${token}`,

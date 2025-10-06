@@ -80,7 +80,8 @@ const DashboardHome = () => {
               </div>
               <div>
                 <h2 className="text-5xl font-bold">{formatCurrency(stats.stats.totalRevenue || 0).replace('.00', '')}</h2>
-                <p className="text-white/80 text-sm mt-1">Congratulations, {user?.firstName}</p>
+                <p className="text-white/80 text-sm mt-1">Congratulations, </p>
+                {/* <p className="text-white/80 text-sm mt-1">Congratulations, {user?.firstName}</p> */}
                 <p className="text-white/70 text-xs">Your sales record has been great</p>
               </div>
             </div>
