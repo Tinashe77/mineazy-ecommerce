@@ -65,108 +65,126 @@ const DashboardHome = () => {
 
   return (
     <div className="space-y-6">
-      {/* Hero Card with Stats */}
-      {stats && (
-        <div className="bg-gradient-to-br from-green-400 via-blue-400 to-purple-500 rounded-3xl p-8 text-white relative overflow-hidden shadow-xl">
-          <div className="absolute top-0 right-0 w-64 h-64 bg-white opacity-10 rounded-full -mr-32 -mt-32"></div>
-          <div className="absolute bottom-0 left-0 w-48 h-48 bg-white opacity-10 rounded-full -ml-24 -mb-24"></div>
-          
-          <div className="relative z-10">
-            <div className="flex items-center gap-3 mb-6">
-              <div className="w-16 h-16 bg-white/30 backdrop-blur-sm rounded-2xl flex items-center justify-center">
-                <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-              </div>
-              <div>
-                <h2 className="text-5xl font-bold">{formatCurrency(stats.stats.totalRevenue || 0).replace('.00', '')}</h2>
-                <p className="text-white/80 text-sm mt-1">Congratulations, </p>
-                {/* <p className="text-white/80 text-sm mt-1">Congratulations, {user?.firstName}</p> */}
-                <p className="text-white/70 text-xs">Your sales record has been great</p>
-              </div>
-            </div>
-            
-            <Link to="/dashboard/orders">
-              <button className="bg-white/20 hover:bg-white/30 backdrop-blur-sm text-white px-6 py-2.5 rounded-xl font-medium transition-all">
-                View Sales
-              </button>
-            </Link>
-          </div>
+      {/* Welcome Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">
+            Welcome back, {user?.firstName || 'Admin'} 👋
+          </h1>
+          <p className="text-gray-500 mt-1">Here's what's happening with your store today</p>
         </div>
-      )}
+        <div className="flex items-center gap-2">
+          <select
+            value={period}
+            onChange={(e) => setPeriod(Number(e.target.value))}
+            className="px-4 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+          >
+            <option value={7}>Last 7 days</option>
+            <option value={30}>Last 30 days</option>
+            <option value={90}>Last 90 days</option>
+          </select>
+        </div>
+      </div>
 
       {/* Statistics Cards */}
       {stats && (
-        <div className="mb-6">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-xl font-semibold text-gray-800">Statistics</h2>
-            <p className="text-sm text-gray-500">Updated Last Month Ago</p>
-          </div>
-          
-          <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-            {/* Annual Sales */}
-            <div className="bg-white rounded-2xl p-6 border border-gray-100 hover:shadow-lg transition-shadow">
-              <div className="flex items-center justify-between mb-4">
-                <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center">
-                  <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          {/* Total Revenue */}
+          <div className="bg-white rounded-xl p-6 border border-gray-200 hover:border-primary-300 transition-all hover:shadow-lg group">
+            <div className="flex items-start justify-between">
+              <div className="flex-1">
+                <p className="text-sm font-medium text-gray-600 mb-2">Total Revenue</p>
+                <h3 className="text-3xl font-bold text-gray-900 mb-1">
+                  {formatCurrency(stats.stats.totalRevenue || 0)}
+                </h3>
+                <div className="flex items-center gap-1 text-sm">
+                  <svg className="w-4 h-4 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
                   </svg>
+                  <span className="text-green-600 font-medium">12.5%</span>
+                  <span className="text-gray-500">vs last month</span>
                 </div>
               </div>
-              <h3 className="text-2xl font-bold text-gray-800">{formatCurrency(stats.stats.totalRevenue || 0).replace('.00', '')}</h3>
-              <p className="text-sm text-gray-500 mt-1">Annual Sales</p>
+              <div className="w-12 h-12 bg-blue-50 rounded-lg flex items-center justify-center group-hover:bg-blue-100 transition-colors">
+                <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </div>
             </div>
+          </div>
 
-            {/* Customers */}
-            <div className="bg-white rounded-2xl p-6 border border-gray-100 hover:shadow-lg transition-shadow">
-              <div className="flex items-center justify-between mb-4">
-                <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center">
-                  <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-                  </svg>
+          {/* Total Orders */}
+          <div className="bg-white rounded-xl p-6 border border-gray-200 hover:border-primary-300 transition-all hover:shadow-lg group">
+            <div className="flex items-start justify-between">
+              <div className="flex-1">
+                <p className="text-sm font-medium text-gray-600 mb-2">Total Orders</p>
+                <h3 className="text-3xl font-bold text-gray-900 mb-1">
+                  {stats.stats.totalOrders || 0}
+                </h3>
+                <div className="flex items-center gap-1 text-sm">
+                  <span className="text-blue-600 font-medium">{stats.stats.pendingOrders || 0}</span>
+                  <span className="text-gray-500">pending orders</span>
                 </div>
               </div>
-              <h3 className="text-2xl font-bold text-gray-800">{stats.stats.totalUsers || 0}</h3>
-              <p className="text-sm text-gray-500 mt-1">Customers</p>
+              <div className="w-12 h-12 bg-purple-50 rounded-lg flex items-center justify-center group-hover:bg-purple-100 transition-colors">
+                <svg className="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
+                </svg>
+              </div>
             </div>
+          </div>
 
-            {/* Products */}
-            <div className="bg-white rounded-2xl p-6 border border-gray-100 hover:shadow-lg transition-shadow">
-              <div className="flex items-center justify-between mb-4">
-                <div className="w-12 h-12 bg-orange-100 rounded-xl flex items-center justify-center">
-                  <svg className="w-6 h-6 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+          {/* Total Customers */}
+          <div className="bg-white rounded-xl p-6 border border-gray-200 hover:border-primary-300 transition-all hover:shadow-lg group">
+            <div className="flex items-start justify-between">
+              <div className="flex-1">
+                <p className="text-sm font-medium text-gray-600 mb-2">Total Customers</p>
+                <h3 className="text-3xl font-bold text-gray-900 mb-1">
+                  {stats.stats.totalUsers || 0}
+                </h3>
+                <div className="flex items-center gap-1 text-sm">
+                  <svg className="w-4 h-4 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
                   </svg>
+                  <span className="text-green-600 font-medium">8.2%</span>
+                  <span className="text-gray-500">growth</span>
                 </div>
               </div>
-              <h3 className="text-2xl font-bold text-gray-800">{stats.stats.totalProducts || 0}</h3>
-              <p className="text-sm text-gray-500 mt-1">Products</p>
+              <div className="w-12 h-12 bg-green-50 rounded-lg flex items-center justify-center group-hover:bg-green-100 transition-colors">
+                <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                </svg>
+              </div>
             </div>
+          </div>
 
-            {/* Orders */}
-            <div className="bg-white rounded-2xl p-6 border border-gray-100 hover:shadow-lg transition-shadow">
-              <div className="flex items-center justify-between mb-4">
-                <div className="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center">
-                  <svg className="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
-                  </svg>
+          {/* Total Products */}
+          <div className="bg-white rounded-xl p-6 border border-gray-200 hover:border-primary-300 transition-all hover:shadow-lg group">
+            <div className="flex items-start justify-between">
+              <div className="flex-1">
+                <p className="text-sm font-medium text-gray-600 mb-2">Total Products</p>
+                <h3 className="text-3xl font-bold text-gray-900 mb-1">
+                  {stats.stats.totalProducts || 0}
+                </h3>
+                <div className="flex items-center gap-1 text-sm">
+                  {stats.stats.lowStockProducts > 0 ? (
+                    <>
+                      <svg className="w-4 h-4 text-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                      </svg>
+                      <span className="text-orange-600 font-medium">{stats.stats.lowStockProducts}</span>
+                      <span className="text-gray-500">low stock</span>
+                    </>
+                  ) : (
+                    <span className="text-gray-500">All in stock</span>
+                  )}
                 </div>
               </div>
-              <h3 className="text-2xl font-bold text-gray-800">{stats.stats.totalOrders || 0}</h3>
-              <p className="text-sm text-gray-500 mt-1">Total Orders</p>
-            </div>
-
-            {/* Pending Orders */}
-            <div className="bg-white rounded-2xl p-6 border border-gray-100 hover:shadow-lg transition-shadow">
-              <div className="flex items-center justify-between mb-4">
-                <div className="w-12 h-12 bg-yellow-100 rounded-xl flex items-center justify-center">
-                  <svg className="w-6 h-6 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                </div>
+              <div className="w-12 h-12 bg-orange-50 rounded-lg flex items-center justify-center group-hover:bg-orange-100 transition-colors">
+                <svg className="w-6 h-6 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+                </svg>
               </div>
-              <h3 className="text-2xl font-bold text-gray-800">{stats.stats.pendingOrders || 0}</h3>
-              <p className="text-sm text-gray-500 mt-1">Pending Orders</p>
             </div>
           </div>
         </div>
@@ -174,45 +192,46 @@ const DashboardHome = () => {
 
       {/* Charts Section */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Revenue Report */}
-        <div className="lg:col-span-2 bg-white rounded-2xl p-6 border border-gray-100 shadow-sm">
+        {/* Revenue Chart */}
+        <div className="lg:col-span-2 bg-white rounded-xl p-6 border border-gray-200">
           <div className="flex items-center justify-between mb-6">
-            <h3 className="text-lg font-semibold text-gray-800">Revenue Report</h3>
+            <div>
+              <h3 className="text-lg font-semibold text-gray-900">Revenue Overview</h3>
+              <p className="text-sm text-gray-500 mt-1">Daily revenue and order trends</p>
+            </div>
             <div className="flex items-center gap-4">
               <div className="flex items-center gap-2">
-                <span className="w-3 h-3 bg-blue-500 rounded-full"></span>
-                <span className="text-sm text-gray-600">Earning</span>
+                <div className="w-3 h-3 bg-primary-600 rounded-full"></div>
+                <span className="text-sm text-gray-600">Revenue</span>
               </div>
               <div className="flex items-center gap-2">
-                <span className="w-3 h-3 bg-green-500 rounded-full"></span>
-                <span className="text-sm text-gray-600">Expense</span>
+                <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+                <span className="text-sm text-gray-600">Orders</span>
               </div>
-              <select className="text-sm border border-gray-200 rounded-lg px-3 py-1.5">
-                <option>2020</option>
-                <option>2021</option>
-                <option>2022</option>
-              </select>
             </div>
           </div>
 
-          <div className="mb-4">
-            <div className="text-3xl font-bold text-gray-800">{formatCurrency(stats?.stats?.totalRevenue || 0)}</div>
-            <div className="text-sm text-gray-500">Total Revenue - Last {period} days</div>
-          </div>
-
           {stats?.revenueByDay && stats.revenueByDay.length > 0 ? (
-            <ResponsiveContainer width="100%" height={250}>
+            <ResponsiveContainer width="100%" height={300}>
               <BarChart data={stats.revenueByDay}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" vertical={false} />
                 <XAxis 
                   dataKey="_id" 
-                  tickFormatter={(value) => new Date(value).toLocaleDateString('en-US', { month: 'short' })}
-                  stroke="#888"
+                  tickFormatter={(value) => new Date(value).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                  stroke="#9ca3af"
+                  tick={{ fontSize: 12 }}
                 />
-                <YAxis stroke="#888" />
-                <Tooltip />
-                <Bar dataKey="revenue" fill="#3b82f6" radius={[8, 8, 0, 0]} />
-                <Bar dataKey="orders" fill="#10b981" radius={[8, 8, 0, 0]} />
+                <YAxis stroke="#9ca3af" tick={{ fontSize: 12 }} />
+                <Tooltip 
+                  contentStyle={{ 
+                    backgroundColor: 'white', 
+                    border: '1px solid #e5e7eb',
+                    borderRadius: '8px',
+                    padding: '12px'
+                  }}
+                />
+                <Bar dataKey="revenue" fill="#4f46e5" radius={[6, 6, 0, 0]} />
+                <Bar dataKey="orders" fill="#10b981" radius={[6, 6, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           ) : (
@@ -220,116 +239,39 @@ const DashboardHome = () => {
               No data available
             </div>
           )}
-
-          <div className="mt-6 text-center">
-            <button className="bg-primary-700 hover:bg-primary-800 text-white px-6 py-2.5 rounded-xl font-medium transition-colors">
-              Increase Budget
-            </button>
-          </div>
         </div>
 
-        {/* Orders & Earnings */}
+        {/* Order Status & Quick Stats */}
         <div className="space-y-6">
-          {/* Orders */}
-          {stats && (
-            <div className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm">
-              <h3 className="text-lg font-semibold text-gray-800 mb-4">Orders</h3>
-              <div className="text-3xl font-bold text-gray-800 mb-2">{stats.stats.totalOrders || 0}</div>
-              <p className="text-sm text-gray-600 mb-4">
-                {stats.stats.recentOrders || 0} new orders in last {period} days
-              </p>
-              {stats.revenueByDay && stats.revenueByDay.length > 0 && (
-                <ResponsiveContainer width="100%" height={120}>
-                  <BarChart data={stats.revenueByDay.slice(-6)}>
-                    <Bar dataKey="orders" fill="#10b981" radius={[4, 4, 0, 0]} />
-                  </BarChart>
-                </ResponsiveContainer>
-              )}
-            </div>
-          )}
-
-          {/* Low Stock Alert */}
-          {stats && (
-            <div className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm">
-              <h3 className="text-lg font-semibold text-gray-800 mb-4">Inventory Alert</h3>
-              <div className="text-3xl font-bold text-gray-800 mb-4">{stats.stats.lowStockProducts || 0}</div>
-              <p className="text-sm text-orange-600 mb-4">Products running low on stock</p>
-              <Link to="/dashboard/products?inStock=false">
-                <button className="w-full bg-orange-50 text-orange-600 py-2 rounded-xl font-medium hover:bg-orange-100 transition-colors">
-                  View Products
-                </button>
-              </Link>
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* Bottom Section */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Recent Orders */}
-        {stats?.recentOrders && stats.recentOrders.length > 0 && (
-          <div className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-gray-800">Recent Orders</h3>
-              <Link to="/dashboard/orders" className="text-sm text-primary-700 hover:text-primary-800 font-medium">
-                View All →
-              </Link>
-            </div>
-            <div className="space-y-3">
-              {stats.recentOrders.slice(0, 5).map((order) => (
-                <Link 
-                  key={order._id}
-                  to={`/dashboard/orders/${order._id}`}
-                  className="flex items-center justify-between p-3 hover:bg-gray-50 rounded-lg transition-colors"
-                >
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-                      <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
-                      </svg>
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium text-gray-800">{order.orderNumber}</p>
-                      <p className="text-xs text-gray-500">{order.customerInfo?.email}</p>
-                    </div>
-                  </div>
-                  <span className="text-sm font-semibold text-gray-800">{formatCurrency(order.total)}</span>
-                </Link>
-              ))}
-            </div>
-          </div>
-        )}
-
-        
-      </div>      {/* Additional Stats Section */}
-      {stats && (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Order Status Breakdown */}
-          {stats.ordersByStatus && stats.ordersByStatus.length > 0 && (
-            <div className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm">
-              <h3 className="text-lg font-semibold text-gray-800 mb-4">Order Status</h3>
-              <div className="space-y-3">
+          {stats?.ordersByStatus && stats.ordersByStatus.length > 0 && (
+            <div className="bg-white rounded-xl p-6 border border-gray-200">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">Order Status</h3>
+              <div className="space-y-4">
                 {stats.ordersByStatus.map((status) => {
-                  const statusColors = {
-                    pending: { bg: 'bg-yellow-100', text: 'text-yellow-700', bar: 'bg-yellow-500' },
-                    processing: { bg: 'bg-blue-100', text: 'text-blue-700', bar: 'bg-blue-500' },
-                    shipped: { bg: 'bg-purple-100', text: 'text-purple-700', bar: 'bg-purple-500' },
-                    delivered: { bg: 'bg-green-100', text: 'text-green-700', bar: 'bg-green-500' },
-                    cancelled: { bg: 'bg-red-100', text: 'text-red-700', bar: 'bg-red-500' },
+                  const statusConfig = {
+                    pending: { color: 'bg-yellow-500', label: 'Pending', textColor: 'text-yellow-700' },
+                    processing: { color: 'bg-blue-500', label: 'Processing', textColor: 'text-blue-700' },
+                    shipped: { color: 'bg-purple-500', label: 'Shipped', textColor: 'text-purple-700' },
+                    delivered: { color: 'bg-green-500', label: 'Delivered', textColor: 'text-green-700' },
+                    cancelled: { color: 'bg-red-500', label: 'Cancelled', textColor: 'text-red-700' },
                   };
-                  const colors = statusColors[status._id] || statusColors.pending;
-                  const percentage = stats.stats.totalOrders > 0 ? (status.count / stats.stats.totalOrders * 100).toFixed(1) : 0;
+                  const config = statusConfig[status._id] || statusConfig.pending;
+                  const percentage = stats.stats.totalOrders > 0 ? (status.count / stats.stats.totalOrders * 100).toFixed(0) : 0;
                   
                   return (
                     <div key={status._id}>
                       <div className="flex items-center justify-between mb-2">
-                        <span className={`inline-flex items-center px-2 py-1 rounded-lg text-xs font-medium ${colors.bg} ${colors.text} capitalize`}>
-                          {status._id}
+                        <span className={`text-sm font-medium ${config.textColor} capitalize`}>
+                          {config.label}
                         </span>
-                        <span className="text-sm font-semibold text-gray-800">{status.count}</span>
+                        <span className="text-sm font-semibold text-gray-900">{status.count}</span>
                       </div>
-                      <div className="w-full bg-gray-200 rounded-full h-2">
-                        <div className={`${colors.bar} h-2 rounded-full`} style={{ width: `${percentage}%` }}></div>
+                      <div className="w-full bg-gray-100 rounded-full h-2">
+                        <div 
+                          className={`${config.color} h-2 rounded-full transition-all duration-500`} 
+                          style={{ width: `${percentage}%` }}
+                        ></div>
                       </div>
                     </div>
                   );
@@ -339,110 +281,189 @@ const DashboardHome = () => {
           )}
 
           {/* Quick Actions */}
-          <div className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm">
-            <h3 className="text-lg font-semibold text-gray-800 mb-4">Quick Actions</h3>
-            <div className="grid grid-cols-2 gap-3">
-              <Link to="/dashboard/products/new" className="p-4 bg-blue-50 hover:bg-blue-100 rounded-xl transition-colors group">
-                <div className="w-10 h-10 bg-blue-500 rounded-lg flex items-center justify-center mb-2">
-                  <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <div className="bg-white rounded-xl p-6 border border-gray-200">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h3>
+            <div className="space-y-2">
+              <Link 
+                to="/dashboard/products/new" 
+                className="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-50 transition-colors group"
+              >
+                <div className="w-10 h-10 bg-primary-50 rounded-lg flex items-center justify-center group-hover:bg-primary-100">
+                  <svg className="w-5 h-5 text-primary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
                   </svg>
                 </div>
-                <p className="text-sm font-medium text-gray-800">Add Product</p>
+                <span className="text-sm font-medium text-gray-700 group-hover:text-gray-900">Add New Product</span>
               </Link>
 
-              <Link to="/dashboard/orders" className="p-4 bg-green-50 hover:bg-green-100 rounded-xl transition-colors group">
-                <div className="w-10 h-10 bg-green-500 rounded-lg flex items-center justify-center mb-2">
-                  <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <Link 
+                to="/dashboard/orders" 
+                className="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-50 transition-colors group"
+              >
+                <div className="w-10 h-10 bg-green-50 rounded-lg flex items-center justify-center group-hover:bg-green-100">
+                  <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
                   </svg>
                 </div>
-                <p className="text-sm font-medium text-gray-800">View Orders</p>
+                <span className="text-sm font-medium text-gray-700 group-hover:text-gray-900">Manage Orders</span>
               </Link>
 
-              <Link to="/dashboard/users" className="p-4 bg-purple-50 hover:bg-purple-100 rounded-xl transition-colors group">
-                <div className="w-10 h-10 bg-purple-500 rounded-lg flex items-center justify-center mb-2">
-                  <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <Link 
+                to="/dashboard/users" 
+                className="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-50 transition-colors group"
+              >
+                <div className="w-10 h-10 bg-purple-50 rounded-lg flex items-center justify-center group-hover:bg-purple-100">
+                  <svg className="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
                   </svg>
                 </div>
-                <p className="text-sm font-medium text-gray-800">Manage Users</p>
-              </Link>
-
-              <Link to="/dashboard/settings" className="p-4 bg-orange-50 hover:bg-orange-100 rounded-xl transition-colors group">
-                <div className="w-10 h-10 bg-orange-500 rounded-lg flex items-center justify-center mb-2">
-                  <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                  </svg>
-                </div>
-                <p className="text-sm font-medium text-gray-800">Settings</p>
+                <span className="text-sm font-medium text-gray-700 group-hover:text-gray-900">View Customers</span>
               </Link>
             </div>
           </div>
+        </div>
+      </div>
 
-          {/* System Alerts */}
-          <div className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm">
-            <h3 className="text-lg font-semibold text-gray-800 mb-4">System Alerts</h3>
-            <div className="space-y-3">
-              {stats.stats.pendingOrders > 0 && (
-                <Link to="/dashboard/orders?status=pending" className="block p-3 bg-yellow-50 border border-yellow-200 rounded-lg hover:bg-yellow-100 transition-colors">
-                  <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 bg-yellow-500 rounded-lg flex items-center justify-center">
-                      <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                      </svg>
-                    </div>
-                    <div className="flex-1">
-                      <p className="text-sm font-medium text-gray-800">Pending Orders</p>
-                      <p className="text-xs text-gray-500">{stats.stats.pendingOrders} orders awaiting processing</p>
-                    </div>
-                  </div>
-                </Link>
-              )}
-
-              {stats.stats.lowStockProducts > 0 && (
-                <Link to="/dashboard/products?inStock=false" className="block p-3 bg-red-50 border border-red-200 rounded-lg hover:bg-red-100 transition-colors">
-                  <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 bg-red-500 rounded-lg flex items-center justify-center">
-                      <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                      </svg>
-                    </div>
-                    <div className="flex-1">
-                      <p className="text-sm font-medium text-gray-800">Low Stock Alert</p>
-                      <p className="text-xs text-gray-500">{stats.stats.lowStockProducts} products need restocking</p>
-                    </div>
-                  </div>
-                </Link>
-              )}
-
-              {stats.stats.newMessages > 0 && (
-                <Link to="/dashboard/contact" className="block p-3 bg-blue-50 border border-blue-200 rounded-lg hover:bg-blue-100 transition-colors">
-                  <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 bg-blue-500 rounded-lg flex items-center justify-center">
-                      <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                      </svg>
-                    </div>
-                    <div className="flex-1">
-                      <p className="text-sm font-medium text-gray-800">New Messages</p>
-                      <p className="text-xs text-gray-500">{stats.stats.newMessages} unread contact messages</p>
-                    </div>
-                  </div>
-                </Link>
-              )}
-
-              {stats.stats.pendingOrders === 0 && stats.stats.lowStockProducts === 0 && stats.stats.newMessages === 0 && (
-                <div className="p-4 bg-green-50 border border-green-200 rounded-lg text-center">
-                  <svg className="w-8 h-8 text-green-500 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                  <p className="text-sm font-medium text-green-800">All systems operational</p>
-                  <p className="text-xs text-green-600 mt-1">No alerts at this time</p>
-                </div>
-              )}
+      {/* Recent Orders & Top Products */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Recent Orders */}
+        {stats?.recentOrders && stats.recentOrders.length > 0 && (
+          <div className="bg-white rounded-xl p-6 border border-gray-200">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-gray-900">Recent Orders</h3>
+              <Link to="/dashboard/orders" className="text-sm font-medium text-primary-600 hover:text-primary-700">
+                View All →
+              </Link>
             </div>
+            <div className="space-y-3">
+              {stats.recentOrders.slice(0, 5).map((order) => (
+                <Link 
+                  key={order._id}
+                  to={`/dashboard/orders/${order._id}`}
+                  className="flex items-center justify-between p-4 rounded-lg hover:bg-gray-50 transition-colors border border-gray-100"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-blue-50 rounded-lg flex items-center justify-center">
+                      <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
+                      </svg>
+                    </div>
+                    <div>
+                      <p className="text-sm font-semibold text-gray-900">{order.orderNumber}</p>
+                      <p className="text-xs text-gray-500">{order.customerInfo?.email}</p>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-sm font-semibold text-gray-900">{formatCurrency(order.total)}</p>
+                    <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-yellow-100 text-yellow-800 capitalize">
+                      {order.status}
+                    </span>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Top Products */}
+        {stats?.topProducts && stats.topProducts.length > 0 && (
+          <div className="bg-white rounded-xl p-6 border border-gray-200">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-gray-900">Top Products</h3>
+              <Link to="/dashboard/products" className="text-sm font-medium text-primary-600 hover:text-primary-700">
+                View All →
+              </Link>
+            </div>
+            <div className="space-y-3">
+              {stats.topProducts.slice(0, 5).map((product, index) => (
+                <div 
+                  key={product._id}
+                  className="flex items-center justify-between p-4 rounded-lg border border-gray-100"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-gradient-to-br from-primary-500 to-purple-500 rounded-lg flex items-center justify-center text-white font-bold text-sm">
+                      #{index + 1}
+                    </div>
+                    <div>
+                      <p className="text-sm font-semibold text-gray-900">{product.name}</p>
+                      <p className="text-xs text-gray-500">SKU: {product.sku}</p>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-sm font-semibold text-gray-900">{formatCurrency(product.revenue)}</p>
+                    <p className="text-xs text-gray-500">{product.unitsSold} sold</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Alerts Section */}
+      {stats && (stats.stats.pendingOrders > 0 || stats.stats.lowStockProducts > 0 || stats.stats.newMessages > 0) && (
+        <div className="bg-white rounded-xl p-6 border border-gray-200">
+          <h3 className="text-lg font-semibold text-gray-900 mb-4">Alerts & Notifications</h3>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {stats.stats.pendingOrders > 0 && (
+              <Link 
+                to="/dashboard/orders?status=pending" 
+                className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg hover:bg-yellow-100 transition-colors"
+              >
+                <div className="flex items-center gap-3 mb-2">
+                  <div className="w-10 h-10 bg-yellow-500 rounded-lg flex items-center justify-center">
+                    <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                  </div>
+                  <div>
+                    <p className="text-2xl font-bold text-gray-900">{stats.stats.pendingOrders}</p>
+                    <p className="text-sm text-gray-600">Pending Orders</p>
+                  </div>
+                </div>
+                <p className="text-xs text-gray-500">Requires immediate attention</p>
+              </Link>
+            )}
+
+            {stats.stats.lowStockProducts > 0 && (
+              <Link 
+                to="/dashboard/products?inStock=false" 
+                className="p-4 bg-red-50 border border-red-200 rounded-lg hover:bg-red-100 transition-colors"
+              >
+                <div className="flex items-center gap-3 mb-2">
+                  <div className="w-10 h-10 bg-red-500 rounded-lg flex items-center justify-center">
+                    <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                    </svg>
+                  </div>
+                  <div>
+                    <p className="text-2xl font-bold text-gray-900">{stats.stats.lowStockProducts}</p>
+                    <p className="text-sm text-gray-600">Low Stock Items</p>
+                  </div>
+                </div>
+                <p className="text-xs text-gray-500">Products need restocking</p>
+              </Link>
+            )}
+
+            {stats.stats.newMessages > 0 && (
+              <Link 
+                to="/dashboard/contact" 
+                className="p-4 bg-blue-50 border border-blue-200 rounded-lg hover:bg-blue-100 transition-colors"
+              >
+                <div className="flex items-center gap-3 mb-2">
+                  <div className="w-10 h-10 bg-blue-500 rounded-lg flex items-center justify-center">
+                    <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                    </svg>
+                  </div>
+                  <div>
+                    <p className="text-2xl font-bold text-gray-900">{stats.stats.newMessages}</p>
+                    <p className="text-sm text-gray-600">New Messages</p>
+                  </div>
+                </div>
+                <p className="text-xs text-gray-500">Unread contact messages</p>
+              </Link>
+            )}
           </div>
         </div>
       )}
