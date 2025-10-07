@@ -1,7 +1,7 @@
 import { useEffect, useState, useContext } from 'react';
 import { Link } from 'react-router-dom';
 import { AuthContext } from '../../context/AuthContext';
-import { getProducts, deleteProduct, bulkImportProducts } from '../../services/products';
+import { getProducts, deleteProduct, bulkImportProducts, downloadSampleCSV, downloadUpdateSampleCSV } from '../../services/products';
 import { getCategories } from '../../services/categories';
 
 const ProductsPage = () => {
@@ -12,7 +12,6 @@ const ProductsPage = () => {
   const [error, setError] = useState(null);
   const { token } = useContext(AuthContext);
   const [showFilters, setShowFilters] = useState(false);
-
 
   // Filter states
   const [filters, setFilters] = useState({
@@ -30,6 +29,11 @@ const ProductsPage = () => {
   const [importFile, setImportFile] = useState(null);
   const [importing, setImporting] = useState(false);
   const [importError, setImportError] = useState(null);
+  const [importResult, setImportResult] = useState(null);
+  const [importOptions, setImportOptions] = useState({
+    updateExisting: true,
+    fieldsToUpdate: 'all', // or comma-separated list
+  });
 
   useEffect(() => {
     fetchCategories();
@@ -54,7 +58,6 @@ const ProductsPage = () => {
         ...filters,
       };
 
-      // Remove empty filters
       Object.keys(params).forEach(key => {
         if (params[key] === '' || params[key] === null || params[key] === undefined) {
           delete params[key];
@@ -128,60 +131,97 @@ const ProductsPage = () => {
       }
       setImportFile(file);
       setImportError(null);
+      setImportResult(null);
     }
   };
 
   const handleBulkImport = async () => {
-  if (!importFile) {
-    setImportError('Please select a file');
-    return;
-  }
-
-  // Validate file type
-  if (!importFile.name.endsWith('.csv')) {
-    setImportError('Please select a CSV file');
-    return;
-  }
-
-  // Validate file size (optional, but good practice)
-  if (importFile.size > 10 * 1024 * 1024) { // 10MB max
-    setImportError('File size must be less than 10MB');
-    return;
-  }
-
-  setImporting(true);
-  setImportError(null);
-
-  try {
-    const response = await bulkImportProducts(token, importFile);
-    
-    if (response.success !== false && !response.errors) {
-      alert(`Successfully imported products!`);
-      setShowImportModal(false);
-      setImportFile(null);
-      fetchProducts(1);
-    } else {
-      setImportError(response.message || response.errors?.[0]?.msg || 'Import failed');
+    if (!importFile) {
+      setImportError('Please select a file');
+      return;
     }
-  } catch (error) {
-    setImportError('Import failed: ' + error.message);
-  } finally {
-    setImporting(false);
-  }
-};
 
-  const downloadTemplate = () => {
-    // Create CSV template
-    const template = `name,description,price,sku,category,stockQuantity,specifications,tags
-"Sample Product","Product description",99.99,PROD001,category-id,100,"{""brand"":""Brand Name""}","tag1,tag2"`;
-    
-    const blob = new Blob([template], { type: 'text/csv' });
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'product-import-template.csv';
-    a.click();
-    window.URL.revokeObjectURL(url);
+    if (!importFile.name.endsWith('.csv')) {
+      setImportError('Please select a CSV file');
+      return;
+    }
+
+    if (importFile.size > 5 * 1024 * 1024) { // 5MB max per API docs
+      setImportError('File size must be less than 5MB');
+      return;
+    }
+
+    setImporting(true);
+    setImportError(null);
+    setImportResult(null);
+
+    try {
+      const response = await bulkImportProducts(token, importFile, importOptions);
+      
+      if (response.results && response.results.success !== false) {
+        setImportResult(response.results);
+        
+        // Show success message with details
+        const { imported, updated, skipped, errors } = response.results;
+        let message = `Import completed successfully!\n`;
+        if (imported > 0) message += `✓ ${imported} products created\n`;
+        if (updated > 0) message += `✓ ${updated} products updated\n`;
+        if (skipped?.length > 0) message += `⚠ ${skipped.length} products skipped\n`;
+        if (errors?.length > 0) message += `✗ ${errors.length} errors occurred\n`;
+        
+        alert(message);
+        
+        // Refresh products list
+        fetchProducts(1);
+        
+        // Only close modal if no errors
+        if (!errors || errors.length === 0) {
+          setTimeout(() => {
+            setShowImportModal(false);
+            setImportFile(null);
+            setImportResult(null);
+          }, 3000);
+        }
+      } else {
+        setImportError(response.message || 'Import failed');
+      }
+    } catch (error) {
+      setImportError('Import failed: ' + error.message);
+    } finally {
+      setImporting(false);
+    }
+  };
+
+  const downloadFullTemplate = async () => {
+    try {
+      const blob = await downloadSampleCSV(token);
+      if (blob) {
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'products-sample.csv';
+        a.click();
+        window.URL.revokeObjectURL(url);
+      }
+    } catch (error) {
+      alert('Failed to download template: ' + error.message);
+    }
+  };
+
+  const downloadUpdateTemplate = async () => {
+    try {
+      const blob = await downloadUpdateSampleCSV(token);
+      if (blob) {
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'products-update-sample.csv';
+        a.click();
+        window.URL.revokeObjectURL(url);
+      }
+    } catch (error) {
+      alert('Failed to download template: ' + error.message);
+    }
   };
 
   if (loading && products.length === 0) {
@@ -215,186 +255,141 @@ const ProductsPage = () => {
         </div>
       </div>
 
-      {/* Filters */}
-<div className="mb-4">
-  <button
-    onClick={() => setShowFilters(!showFilters)}
-    className="flex items-center gap-2 px-4 py-2.5 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors shadow-sm"
-  >
-    <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
-    </svg>
-    <span className="font-medium text-gray-700">
-      {showFilters ? 'Hide Filters' : 'Show Filters'}
-    </span>
-    <svg 
-      className={`w-4 h-4 text-gray-600 transition-transform ${showFilters ? 'rotate-180' : ''}`}
-      fill="none" 
-      stroke="currentColor" 
-      viewBox="0 0 24 24"
-    >
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-    </svg>
-  </button>
-</div>
-
-{/* Collapsible Filters */}
-{showFilters && (
-  <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 mb-6 animate-slide-down">
-    <div className="flex items-center justify-between mb-4">
-      <h3 className="text-lg font-semibold text-gray-900">Filters</h3>
-      <button
-        type="button"
-        onClick={resetFilters}
-        className="text-sm text-gray-600 hover:text-gray-900 font-medium"
-      >
-        Reset All
-      </button>
-    </div>
-    
-    <form onSubmit={handleSearch}>
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">Search</label>
-          <div className="relative">
-            <input
-              type="text"
-              name="search"
-              value={filters.search}
-              onChange={handleFilterChange}
-              placeholder="Product name or SKU"
-              className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-            />
-            <svg className="absolute left-3 top-3 w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-            </svg>
-          </div>
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">Category</label>
-          <select
-            name="category"
-            value={filters.category}
-            onChange={handleFilterChange}
-            className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white"
-          >
-            <option value="">All Categories</option>
-            {categories.map((cat) => (
-              <option key={cat._id} value={cat._id}>
-                {cat.name}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">Stock Status</label>
-          <select
-            name="inStock"
-            value={filters.inStock}
-            onChange={handleFilterChange}
-            className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white"
-          >
-            <option value="">All</option>
-            <option value="true">In Stock</option>
-            <option value="false">Out of Stock</option>
-          </select>
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">Min Price</label>
-          <div className="relative">
-            <span className="absolute left-3 top-3 text-gray-500 text-sm">$</span>
-            <input
-              type="number"
-              name="minPrice"
-              value={filters.minPrice}
-              onChange={handleFilterChange}
-              placeholder="0"
-              step="0.01"
-              className="w-full pl-8 pr-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-            />
-          </div>
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">Max Price</label>
-          <div className="relative">
-            <span className="absolute left-3 top-3 text-gray-500 text-sm">$</span>
-            <input
-              type="number"
-              name="maxPrice"
-              value={filters.maxPrice}
-              onChange={handleFilterChange}
-              placeholder="10000"
-              step="0.01"
-              className="w-full pl-8 pr-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-            />
-          </div>
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">Sort By</label>
-          <select
-            name="sortBy"
-            value={filters.sortBy}
-            onChange={handleFilterChange}
-            className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white"
-          >
-            <option value="createdAt">Date Created</option>
-            <option value="name">Name</option>
-            <option value="price">Price</option>
-            <option value="stockQuantity">Stock</option>
-          </select>
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">Order</label>
-          <select
-            name="sortOrder"
-            value={filters.sortOrder}
-            onChange={handleFilterChange}
-            className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white"
-          >
-            <option value="desc">Descending</option>
-            <option value="asc">Ascending</option>
-          </select>
-        </div>
-      </div>
-
-      <div className="flex gap-3 mt-6">
+      {/* Filters Section */}
+      <div className="mb-4">
         <button
-          type="submit"
-          className="px-6 py-2.5 bg-indigo-600 text-white font-medium rounded-lg hover:bg-indigo-700 transition-colors shadow-sm"
+          onClick={() => setShowFilters(!showFilters)}
+          className="flex items-center gap-2 px-4 py-2.5 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors shadow-sm"
         >
-          Apply Filters
-        </button>
-        <button
-          type="button"
-          onClick={resetFilters}
-          className="px-6 py-2.5 bg-white border border-gray-300 text-gray-700 font-medium rounded-lg hover:bg-gray-50 transition-colors"
-        >
-          Reset
+          <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
+          </svg>
+          <span className="font-medium text-gray-700">
+            {showFilters ? 'Hide Filters' : 'Show Filters'}
+          </span>
+          <svg 
+            className={`w-4 h-4 text-gray-600 transition-transform ${showFilters ? 'rotate-180' : ''}`}
+            fill="none" 
+            stroke="currentColor" 
+            viewBox="0 0 24 24"
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+          </svg>
         </button>
       </div>
-    </form>
-  </div>
-)}
+
+      {showFilters && (
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 mb-6">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-semibold text-gray-900">Filters</h3>
+            <button
+              type="button"
+              onClick={resetFilters}
+              className="text-sm text-gray-600 hover:text-gray-900 font-medium"
+            >
+              Reset All
+            </button>
+          </div>
+          
+          <form onSubmit={handleSearch}>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Search</label>
+                <input
+                  type="text"
+                  name="search"
+                  value={filters.search}
+                  onChange={handleFilterChange}
+                  placeholder="Product name or SKU"
+                  className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Category</label>
+                <select
+                  name="category"
+                  value={filters.category}
+                  onChange={handleFilterChange}
+                  className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 bg-white"
+                >
+                  <option value="">All Categories</option>
+                  {categories.map((cat) => (
+                    <option key={cat._id} value={cat._id}>
+                      {cat.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Stock Status</label>
+                <select
+                  name="inStock"
+                  value={filters.inStock}
+                  onChange={handleFilterChange}
+                  className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 bg-white"
+                >
+                  <option value="">All</option>
+                  <option value="true">In Stock</option>
+                  <option value="false">Out of Stock</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Sort By</label>
+                <select
+                  name="sortBy"
+                  value={filters.sortBy}
+                  onChange={handleFilterChange}
+                  className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 bg-white"
+                >
+                  <option value="createdAt">Date Created</option>
+                  <option value="name">Name</option>
+                  <option value="price">Price</option>
+                  <option value="stockQuantity">Stock</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Order</label>
+                <select
+                  name="sortOrder"
+                  value={filters.sortOrder}
+                  onChange={handleFilterChange}
+                  className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 bg-white"
+                >
+                  <option value="desc">Descending</option>
+                  <option value="asc">Ascending</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="flex gap-3 mt-6">
+              <button
+                type="submit"
+                className="px-6 py-2.5 bg-indigo-600 text-white font-medium rounded-lg hover:bg-indigo-700"
+              >
+                Apply Filters
+              </button>
+              <button
+                type="button"
+                onClick={resetFilters}
+                className="px-6 py-2.5 bg-white border border-gray-300 text-gray-700 font-medium rounded-lg hover:bg-gray-50"
+              >
+                Reset
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
 
       {error && (
         <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
           <p className="text-red-800">{error}</p>
-          <button
-            onClick={() => fetchProducts()}
-            className="mt-2 px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"
-          >
-            Retry
-          </button>
         </div>
       )}
 
-      {/* Results Info */}
       {pagination.totalProducts !== undefined && (
         <div className="mb-4 text-gray-600">
           Showing {products.length} of {pagination.totalProducts} products
@@ -534,20 +529,79 @@ const ProductsPage = () => {
 
       {/* Bulk Import Modal */}
       {showImportModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-8 max-w-md w-full">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg p-8 max-w-2xl w-full max-h-[90vh] overflow-y-auto">
             <h2 className="text-2xl font-bold mb-4">Bulk Import Products</h2>
             
-            <div className="mb-4">
-              <p className="text-gray-600 mb-2">
-                Upload a CSV file to import multiple products at once.
+            <div className="mb-6">
+              <p className="text-gray-600 mb-4">
+                Upload a CSV file to import or update multiple products at once.
               </p>
-              <button
-                onClick={downloadTemplate}
-                className="text-indigo-600 hover:text-indigo-700 text-sm font-medium"
-              >
-                Download CSV Template
-              </button>
+              
+              <div className="space-y-2">
+                <div className="flex gap-2">
+                  <button
+                    onClick={downloadFullTemplate}
+                    className="flex-1 px-4 py-2 text-indigo-600 border border-indigo-600 rounded-lg hover:bg-indigo-50 text-sm font-medium"
+                  >
+                    📥 Download Full Template
+                  </button>
+                  <button
+                    onClick={downloadUpdateTemplate}
+                    className="flex-1 px-4 py-2 text-green-600 border border-green-600 rounded-lg hover:bg-green-50 text-sm font-medium"
+                  >
+                    📥 Download Update Template
+                  </button>
+                </div>
+                <p className="text-xs text-gray-500">
+                  Full template: For creating new products<br/>
+                  Update template: For updating stock, prices, or status
+                </p>
+              </div>
+            </div>
+
+            {/* Import Options */}
+            <div className="mb-6 p-4 bg-gray-50 rounded-lg">
+              <h3 className="font-semibold mb-3">Import Options</h3>
+              
+              <div className="space-y-3">
+                <div className="flex items-center">
+                  <input
+                    type="checkbox"
+                    id="updateExisting"
+                    checked={importOptions.updateExisting}
+                    onChange={(e) => setImportOptions(prev => ({
+                      ...prev,
+                      updateExisting: e.target.checked
+                    }))}
+                    className="w-4 h-4 text-indigo-600 rounded"
+                  />
+                  <label htmlFor="updateExisting" className="ml-2 text-sm text-gray-700">
+                    Update existing products (by SKU)
+                  </label>
+                </div>
+                
+                {importOptions.updateExisting && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Fields to Update (leave 'all' to update all fields)
+                    </label>
+                    <input
+                      type="text"
+                      value={importOptions.fieldsToUpdate}
+                      onChange={(e) => setImportOptions(prev => ({
+                        ...prev,
+                        fieldsToUpdate: e.target.value
+                      }))}
+                      placeholder="all or stockQuantity,price,inStock"
+                      className="w-full px-3 py-2 border rounded-lg text-sm"
+                    />
+                    <p className="text-xs text-gray-500 mt-1">
+                      Examples: stockQuantity,inStock | price,salePrice | isActive,featured
+                    </p>
+                  </div>
+                )}
+              </div>
             </div>
 
             <div className="mb-4">
@@ -562,14 +616,53 @@ const ProductsPage = () => {
               />
               {importFile && (
                 <p className="text-sm text-gray-600 mt-2">
-                  Selected: {importFile.name}
+                  Selected: {importFile.name} ({(importFile.size / 1024).toFixed(2)} KB)
                 </p>
               )}
             </div>
 
             {importError && (
               <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+                <p className="text-red-600 text-sm font-medium">Error:</p>
                 <p className="text-red-600 text-sm">{importError}</p>
+              </div>
+            )}
+
+            {importResult && (
+              <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                <p className="font-semibold text-blue-900 mb-2">Import Results:</p>
+                <div className="space-y-1 text-sm">
+                  {importResult.imported > 0 && (
+                    <p className="text-green-700">✓ Created: {importResult.imported} products</p>
+                  )}
+                  {importResult.updated > 0 && (
+                    <p className="text-blue-700">✓ Updated: {importResult.updated} products</p>
+                  )}
+                  {importResult.skipped?.length > 0 && (
+                    <details className="text-yellow-700">
+                      <summary className="cursor-pointer">
+                        ⚠ Skipped: {importResult.skipped.length} products
+                      </summary>
+                      <ul className="ml-4 mt-2 space-y-1">
+                        {importResult.skipped.map((skip, idx) => (
+                          <li key={idx}>Row {skip.row} - {skip.sku}: {skip.reason}</li>
+                        ))}
+                      </ul>
+                    </details>
+                  )}
+                  {importResult.errors?.length > 0 && (
+                    <details className="text-red-700">
+                      <summary className="cursor-pointer">
+                        ✗ Errors: {importResult.errors.length} products
+                      </summary>
+                      <ul className="ml-4 mt-2 space-y-1">
+                        {importResult.errors.map((err, idx) => (
+                          <li key={idx}>Row {err.row} - {err.sku}: {err.error}</li>
+                        ))}
+                      </ul>
+                    </details>
+                  )}
+                </div>
               </div>
             )}
 
@@ -579,17 +672,18 @@ const ProductsPage = () => {
                 disabled={!importFile || importing}
                 className="flex-1 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
               >
-                {importing ? 'Importing...' : 'Import'}
+                {importing ? 'Importing...' : 'Import CSV'}
               </button>
               <button
                 onClick={() => {
                   setShowImportModal(false);
                   setImportFile(null);
                   setImportError(null);
+                  setImportResult(null);
                 }}
                 className="flex-1 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300"
               >
-                Cancel
+                Close
               </button>
             </div>
           </div>

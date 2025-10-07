@@ -1,4 +1,4 @@
-// src/services/products.js - FIXED VERSION
+// src/services/products.js - COMPLETE FIX
 const API_BASE_URL = import.meta.env.MODE === 'production' 
   ? 'https://mining-equipment-backend.onrender.com' 
   : '';
@@ -138,41 +138,70 @@ export const deleteProduct = async (token, id) => {
   }
 };
 
-export const bulkImportProducts = async (token, csvFile) => {
+/**
+ * Bulk import products from CSV file
+ * @param {string} token - Authentication token
+ * @param {File} csvFile - CSV file to import
+ * @param {Object} options - Import options
+ * @param {boolean} options.updateExisting - Whether to update existing products (default: true)
+ * @param {string} options.fieldsToUpdate - Comma-separated list of fields to update (default: 'all')
+ * @returns {Promise<Object>} Import results
+ */
+export const bulkImportProducts = async (token, csvFile, options = {}) => {
   try {
     const formData = new FormData();
-    formData.append('csv', csvFile); // Field name MUST be 'csv'
+    formData.append('csv', csvFile); // Field name MUST be 'csv' per API docs
+    
+    // Add import options as per API documentation
+    if (options.updateExisting !== undefined) {
+      formData.append('updateExisting', options.updateExisting.toString());
+    }
+    
+    if (options.fieldsToUpdate && options.fieldsToUpdate !== 'all') {
+      formData.append('fieldsToUpdate', options.fieldsToUpdate);
+    }
     
     const response = await fetch(`${API_URL}/bulk-import`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${token}`,
         // CRITICAL: NO Content-Type header for FormData!
+        // Browser will automatically set multipart/form-data with boundary
       },
       body: formData,
     });
+    
     return await handleResponse(response);
   } catch (error) {
     return { success: false, message: error.message };
   }
 };
 
+/**
+ * Get import template information
+ * Returns field definitions, validation rules, and examples
+ */
 export const getImportTemplate = async (token) => {
   try {
     const response = await fetch(`${API_URL}/import/template`, {
       method: 'GET',
       headers: {
         'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
       },
     });
-    return await response.json();
+    return await handleResponse(response);
   } catch (error) {
-    console.error('Failed to download template:', error);
-    return null;
+    console.error('Failed to get template info:', error);
+    return { success: false, message: error.message };
   }
 };
 
-export const getSampleCSV = async (token) => {
+/**
+ * Download full sample CSV for creating new products
+ * Contains all fields with sample data
+ */
+export const downloadSampleCSV = async (token) => {
   try {
     const response = await fetch(`${API_URL}/import/sample`, {
       method: 'GET',
@@ -180,9 +209,38 @@ export const getSampleCSV = async (token) => {
         'Authorization': `Bearer ${token}`,
       },
     });
+    
+    if (!response.ok) {
+      throw new Error('Failed to download sample CSV');
+    }
+    
     return await response.blob();
   } catch (error) {
-    console.error('Failed to download sample:', error);
+    console.error('Failed to download sample CSV:', error);
+    return null;
+  }
+};
+
+/**
+ * Download update sample CSV
+ * Contains only SKU and common update fields (stock, price, status)
+ */
+export const downloadUpdateSampleCSV = async (token) => {
+  try {
+    const response = await fetch(`${API_URL}/import/sample-update`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
+    });
+    
+    if (!response.ok) {
+      throw new Error('Failed to download update sample CSV');
+    }
+    
+    return await response.blob();
+  } catch (error) {
+    console.error('Failed to download update sample CSV:', error);
     return null;
   }
 };
