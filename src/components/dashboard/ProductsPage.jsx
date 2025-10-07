@@ -13,6 +13,11 @@ const ProductsPage = () => {
   const { token } = useContext(AuthContext);
   const [showFilters, setShowFilters] = useState(false);
 
+  // Selection states for bulk delete
+  const [selectedProducts, setSelectedProducts] = useState([]);
+  const [selectAll, setSelectAll] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+
   // Filter states
   const [filters, setFilters] = useState({
     search: '',
@@ -32,13 +37,19 @@ const ProductsPage = () => {
   const [importResult, setImportResult] = useState(null);
   const [importOptions, setImportOptions] = useState({
     updateExisting: true,
-    fieldsToUpdate: 'all', // or comma-separated list
+    fieldsToUpdate: 'all',
   });
 
   useEffect(() => {
     fetchCategories();
     fetchProducts();
   }, []);
+
+  // Reset selection when products change
+  useEffect(() => {
+    setSelectedProducts([]);
+    setSelectAll(false);
+  }, [products]);
 
   const fetchCategories = async () => {
     const response = await getCategories({ activeOnly: true });
@@ -95,6 +106,79 @@ const ProductsPage = () => {
     }
   };
 
+  // Bulk delete handlers
+  const handleSelectAll = () => {
+    if (selectAll) {
+      setSelectedProducts([]);
+    } else {
+      setSelectedProducts(products.map(p => p._id));
+    }
+    setSelectAll(!selectAll);
+  };
+
+  const handleSelectProduct = (productId) => {
+    setSelectedProducts(prev => {
+      if (prev.includes(productId)) {
+        return prev.filter(id => id !== productId);
+      } else {
+        return [...prev, productId];
+      }
+    });
+  };
+
+  const handleBulkDelete = async () => {
+    if (selectedProducts.length === 0) {
+      alert('Please select products to delete');
+      return;
+    }
+
+    const confirmMessage = `Are you sure you want to delete ${selectedProducts.length} product${selectedProducts.length > 1 ? 's' : ''}? This action cannot be undone.`;
+    
+    if (!window.confirm(confirmMessage)) {
+      return;
+    }
+
+    setDeleting(true);
+    let successCount = 0;
+    let failCount = 0;
+    const errors = [];
+
+    // Delete products one by one
+    for (const productId of selectedProducts) {
+      try {
+        const response = await deleteProduct(token, productId);
+        if (response.success !== false) {
+          successCount++;
+        } else {
+          failCount++;
+          errors.push(`Product ${productId}: ${response.message}`);
+        }
+      } catch (error) {
+        failCount++;
+        errors.push(`Product ${productId}: ${error.message}`);
+      }
+    }
+
+    setDeleting(false);
+
+    // Show results
+    let message = `Bulk delete completed!\n`;
+    if (successCount > 0) message += `✓ ${successCount} products deleted successfully\n`;
+    if (failCount > 0) {
+      message += `✗ ${failCount} products failed to delete\n`;
+      if (errors.length > 0) {
+        message += `\nErrors:\n${errors.join('\n')}`;
+      }
+    }
+
+    alert(message);
+
+    // Reset selection and refresh
+    setSelectedProducts([]);
+    setSelectAll(false);
+    fetchProducts(pagination.currentPage);
+  };
+
   const handlePageChange = (page) => {
     fetchProducts(page);
   };
@@ -146,7 +230,7 @@ const ProductsPage = () => {
       return;
     }
 
-    if (importFile.size > 5 * 1024 * 1024) { // 5MB max per API docs
+    if (importFile.size > 5 * 1024 * 1024) {
       setImportError('File size must be less than 5MB');
       return;
     }
@@ -161,7 +245,6 @@ const ProductsPage = () => {
       if (response.results && response.results.success !== false) {
         setImportResult(response.results);
         
-        // Show success message with details
         const { imported, updated, skipped, errors } = response.results;
         let message = `Import completed successfully!\n`;
         if (imported > 0) message += `✓ ${imported} products created\n`;
@@ -171,10 +254,8 @@ const ProductsPage = () => {
         
         alert(message);
         
-        // Refresh products list
         fetchProducts(1);
         
-        // Only close modal if no errors
         if (!errors || errors.length === 0) {
           setTimeout(() => {
             setShowImportModal(false);
@@ -254,6 +335,48 @@ const ProductsPage = () => {
           </Link>
         </div>
       </div>
+
+      {/* Bulk Actions Bar */}
+      {selectedProducts.length > 0 && (
+        <div className="mb-4 bg-indigo-50 border border-indigo-200 rounded-lg p-4 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <span className="font-medium text-indigo-900">
+              {selectedProducts.length} product{selectedProducts.length > 1 ? 's' : ''} selected
+            </span>
+            <button
+              onClick={() => {
+                setSelectedProducts([]);
+                setSelectAll(false);
+              }}
+              className="text-sm text-indigo-600 hover:text-indigo-800 underline"
+            >
+              Clear selection
+            </button>
+          </div>
+          <button
+            onClick={handleBulkDelete}
+            disabled={deleting}
+            className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 disabled:bg-gray-400 disabled:cursor-not-allowed flex items-center gap-2"
+          >
+            {deleting ? (
+              <>
+                <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                Deleting...
+              </>
+            ) : (
+              <>
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                </svg>
+                Delete Selected
+              </>
+            )}
+          </button>
+        </div>
+      )}
 
       {/* Filters Section */}
       <div className="mb-4">
@@ -402,6 +525,14 @@ const ProductsPage = () => {
           <table className="w-full table-auto">
             <thead>
               <tr className="bg-gray-200 text-gray-600 uppercase text-sm leading-normal">
+                <th className="py-3 px-6 text-left">
+                  <input
+                    type="checkbox"
+                    checked={selectAll}
+                    onChange={handleSelectAll}
+                    className="w-4 h-4 text-indigo-600 rounded"
+                  />
+                </th>
                 <th className="py-3 px-6 text-left">Image</th>
                 <th className="py-3 px-6 text-left">Name</th>
                 <th className="py-3 px-6 text-left">SKU</th>
@@ -415,6 +546,14 @@ const ProductsPage = () => {
             <tbody className="text-gray-600 text-sm font-light">
               {products.map((product) => (
                 <tr key={product._id} className="border-b border-gray-200 hover:bg-gray-100">
+                  <td className="py-3 px-6">
+                    <input
+                      type="checkbox"
+                      checked={selectedProducts.includes(product._id)}
+                      onChange={() => handleSelectProduct(product._id)}
+                      className="w-4 h-4 text-indigo-600 rounded"
+                    />
+                  </td>
                   <td className="py-3 px-6">
                     <img
                       src={product.images?.[0] || '/placeholder-product.png'}
