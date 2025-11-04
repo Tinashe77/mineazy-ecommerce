@@ -1,7 +1,7 @@
 // src/services/settings.js
 const API_BASE_URL = import.meta.env.MODE === 'production' 
   ? 'https://mining-equipment-backend.onrender.com' 
-  : '';
+  : 'http://localhost:3000';
 
 const API_URL = `${API_BASE_URL}/api/settings`;
 

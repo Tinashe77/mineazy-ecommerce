@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { AuthContext } from '../../context/AuthContext';
 import { getProducts, deleteProduct, bulkImportProducts, downloadSampleCSV, downloadUpdateSampleCSV } from '../../services/products';
 import { getCategories } from '../../services/categories';
+import BulkImageImport from './BulkImageImport';
 
 const ProductsPage = () => {
   const [products, setProducts] = useState([]);
@@ -39,6 +40,9 @@ const ProductsPage = () => {
     updateExisting: true,
     fieldsToUpdate: 'all',
   });
+
+  // Bulk image import state
+  const [showBulkImageModal, setShowBulkImageModal] = useState(false);
 
   useEffect(() => {
     fetchCategories();
@@ -323,14 +327,32 @@ const ProductsPage = () => {
         <div className="flex gap-2">
           <button
             onClick={() => setShowImportModal(true)}
-            className="px-4 py-2 text-indigo-600 bg-white border border-indigo-600 rounded-md hover:bg-indigo-50"
+            className="relative px-4 py-2 text-indigo-600 bg-white border-2 border-indigo-600 rounded-md hover:bg-indigo-50 transition-all font-medium flex items-center gap-2"
           >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+            </svg>
             Bulk Import
+            <span className="absolute -top-2 -right-2 bg-green-500 text-white text-xs font-bold px-2 py-0.5 rounded-full">
+              5 Formats
+            </span>
+          </button>
+          <button
+            onClick={() => setShowBulkImageModal(true)}
+            className="px-4 py-2 text-purple-600 bg-white border-2 border-purple-600 rounded-md hover:bg-purple-50 transition-all font-medium flex items-center gap-2"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+            </svg>
+            Bulk Images
           </button>
           <Link
             to="/dashboard/products/new"
-            className="px-4 py-2 text-white bg-indigo-600 rounded-md hover:bg-indigo-700"
+            className="px-4 py-2 text-white bg-indigo-600 rounded-md hover:bg-indigo-700 flex items-center gap-2 font-medium"
           >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+            </svg>
             Add Product
           </Link>
         </div>
@@ -669,33 +691,102 @@ const ProductsPage = () => {
       {/* Bulk Import Modal */}
       {showImportModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg p-8 max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-            <h2 className="text-2xl font-bold mb-4">Bulk Import Products</h2>
-            
+          <div className="bg-white rounded-lg p-8 max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-2xl font-bold">Bulk Import Products</h2>
+              <span className="px-3 py-1 bg-green-100 text-green-800 text-xs font-semibold rounded-full">
+                🔍 Auto-Detection Enabled
+              </span>
+            </div>
+
             <div className="mb-6">
               <p className="text-gray-600 mb-4">
-                Upload a CSV file to import or update multiple products at once.
+                Upload a CSV file to import or update multiple products. The system automatically detects which of the <strong>5 supported formats</strong> you're using!
               </p>
+
+              {/* Format Information - Collapsible */}
+              <details className="mb-4 border border-gray-200 rounded-lg">
+                <summary className="cursor-pointer px-4 py-3 bg-gray-50 hover:bg-gray-100 font-medium text-gray-700 rounded-lg">
+                  📋 View Supported CSV Formats (5 Formats)
+                </summary>
+                <div className="p-4 space-y-4 text-sm">
+                  <div className="border-l-4 border-blue-500 pl-3">
+                    <h4 className="font-semibold text-blue-900">Format 1: Standard (Modern)</h4>
+                    <p className="text-gray-600 text-xs mb-1">Headers: sku, name, description, price, category, stockQuantity</p>
+                    <pre className="bg-gray-100 p-2 rounded text-xs overflow-x-auto">
+sku,name,description,price,category,stockQuantity
+PROD-001,Product Name,Description here,99.99,Electronics,50</pre>
+                  </div>
+
+                  <div className="border-l-4 border-purple-500 pl-3">
+                    <h4 className="font-semibold text-purple-900">Format 2: Legacy - CODE, ITEM, ITEM DESCRIPTION, PRICE</h4>
+                    <p className="text-gray-600 text-xs mb-1">First row = Category name, Second row = Headers</p>
+                    <pre className="bg-gray-100 p-2 rounded text-xs overflow-x-auto">
+Electronics
+CODE,ITEM,ITEM DESCRIPTION,PRICE,
+LAPTOP001,Dell Laptop,High-performance laptop,1200.00,/images/laptop.jpg</pre>
+                  </div>
+
+                  <div className="border-l-4 border-green-500 pl-3">
+                    <h4 className="font-semibold text-green-900">Format 3: Legacy - CODE, PICTURE, DESCRIPTION, PRICE</h4>
+                    <p className="text-gray-600 text-xs mb-1">First row = Category name, PICTURE column for product name</p>
+                    <pre className="bg-gray-100 p-2 rounded text-xs overflow-x-auto">
+Electronics
+CODE,PICTURE,DESCRIPTION,PRICE,
+LAPTOP001,Dell Laptop,High-performance laptop,1200.00,/images/laptop.jpg</pre>
+                  </div>
+
+                  <div className="border-l-4 border-yellow-500 pl-3">
+                    <h4 className="font-semibold text-yellow-900">Format 4: Legacy - No Headers (Positional)</h4>
+                    <p className="text-gray-600 text-xs mb-1">First row = Category, Data follows (SKU, Name, Description, Price, Image)</p>
+                    <pre className="bg-gray-100 p-2 rounded text-xs overflow-x-auto">
+Electronics
+LAPTOP001,Dell Laptop,High-performance laptop,1200.00,/images/laptop.jpg</pre>
+                  </div>
+
+                  <div className="border-l-4 border-orange-500 pl-3">
+                    <h4 className="font-semibold text-orange-900">Format 5: Legacy - Unnamed Price Column</h4>
+                    <p className="text-gray-600 text-xs mb-1">First row = Category, headers with empty column for price</p>
+                    <pre className="bg-gray-100 p-2 rounded text-xs overflow-x-auto">
+Electronics
+CODE,ITEM,ITEM DESCRIPTION,,
+LAPTOP001,Dell Laptop,High-performance laptop,1200.00,/images/laptop.jpg</pre>
+                  </div>
+
+                  <div className="mt-3 p-3 bg-blue-50 rounded-lg">
+                    <p className="text-xs text-blue-900">
+                      <strong>✨ Smart Detection:</strong> Just upload your CSV and the system will automatically detect which format it is. No need to specify!
+                    </p>
+                  </div>
+                </div>
+              </details>
               
               <div className="space-y-2">
-                <div className="flex gap-2">
+                <div className="grid grid-cols-2 gap-2">
                   <button
                     onClick={downloadFullTemplate}
-                    className="flex-1 px-4 py-2 text-indigo-600 border border-indigo-600 rounded-lg hover:bg-indigo-50 text-sm font-medium"
+                    className="px-4 py-3 text-indigo-600 border-2 border-indigo-600 rounded-lg hover:bg-indigo-50 text-sm font-medium transition-colors flex items-center justify-center gap-2"
                   >
-                    📥 Download Full Template
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                    </svg>
+                    Full Template
                   </button>
                   <button
                     onClick={downloadUpdateTemplate}
-                    className="flex-1 px-4 py-2 text-green-600 border border-green-600 rounded-lg hover:bg-green-50 text-sm font-medium"
+                    className="px-4 py-3 text-green-600 border-2 border-green-600 rounded-lg hover:bg-green-50 text-sm font-medium transition-colors flex items-center justify-center gap-2"
                   >
-                    📥 Download Update Template
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                    </svg>
+                    Update Template
                   </button>
                 </div>
-                <p className="text-xs text-gray-500">
-                  Full template: For creating new products<br/>
-                  Update template: For updating stock, prices, or status
-                </p>
+                <div className="p-3 bg-gray-50 rounded-lg text-xs text-gray-600 space-y-1">
+                  <p><strong className="text-indigo-600">Full Template:</strong> Standard format (Format 1) for creating new products with all fields</p>
+                  <p><strong className="text-green-600">Update Template:</strong> Minimal format for quick stock/price updates</p>
+                  <p className="text-yellow-700 pt-1"><strong>💡 Pro Tip:</strong> Have a legacy CSV? Upload it directly - auto-detection will handle it!</p>
+                </div>
               </div>
             </div>
 
@@ -769,34 +860,82 @@ const ProductsPage = () => {
 
             {importResult && (
               <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                <p className="font-semibold text-blue-900 mb-2">Import Results:</p>
+                <p className="font-semibold text-blue-900 mb-3 flex items-center gap-2">
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  Import Results
+                </p>
+
+                {/* Detected Format */}
+                {importResult.detectedFormat && (
+                  <div className="mb-3 p-2 bg-white rounded border border-blue-200">
+                    <p className="text-xs font-semibold text-blue-900 mb-1">🔍 Detected Format:</p>
+                    <p className="text-xs text-blue-700">{importResult.detectedFormat.description}</p>
+                    {importResult.categoryUsed && (
+                      <p className="text-xs text-blue-700 mt-1">
+                        📁 Category: <span className="font-semibold">{importResult.categoryUsed}</span>
+                      </p>
+                    )}
+                  </div>
+                )}
+
                 <div className="space-y-1 text-sm">
+                  {importResult.categoriesCreated?.length > 0 && (
+                    <p className="text-purple-700 flex items-center gap-1">
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+                      </svg>
+                      Categories Created: <strong>{importResult.categoriesCreated.length}</strong>
+                      <span className="text-xs">({importResult.categoriesCreated.map(c => c.name).join(', ')})</span>
+                    </p>
+                  )}
                   {importResult.imported > 0 && (
-                    <p className="text-green-700">✓ Created: {importResult.imported} products</p>
+                    <p className="text-green-700 flex items-center gap-1">
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                      </svg>
+                      Created: <strong>{importResult.imported}</strong> products
+                    </p>
                   )}
                   {importResult.updated > 0 && (
-                    <p className="text-blue-700">✓ Updated: {importResult.updated} products</p>
+                    <p className="text-blue-700 flex items-center gap-1">
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                      </svg>
+                      Updated: <strong>{importResult.updated}</strong> products
+                    </p>
                   )}
                   {importResult.skipped?.length > 0 && (
                     <details className="text-yellow-700">
-                      <summary className="cursor-pointer">
-                        ⚠ Skipped: {importResult.skipped.length} products
+                      <summary className="cursor-pointer flex items-center gap-1 hover:underline">
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                        </svg>
+                        Skipped: <strong>{importResult.skipped.length}</strong> products
                       </summary>
-                      <ul className="ml-4 mt-2 space-y-1">
+                      <ul className="ml-6 mt-2 space-y-1 text-xs">
                         {importResult.skipped.map((skip, idx) => (
-                          <li key={idx}>Row {skip.row} - {skip.sku}: {skip.reason}</li>
+                          <li key={idx} className="list-disc">
+                            Row {skip.row} - {skip.sku}: {skip.reason}
+                          </li>
                         ))}
                       </ul>
                     </details>
                   )}
                   {importResult.errors?.length > 0 && (
                     <details className="text-red-700">
-                      <summary className="cursor-pointer">
-                        ✗ Errors: {importResult.errors.length} products
+                      <summary className="cursor-pointer flex items-center gap-1 hover:underline">
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        Errors: <strong>{importResult.errors.length}</strong> products
                       </summary>
-                      <ul className="ml-4 mt-2 space-y-1">
+                      <ul className="ml-6 mt-2 space-y-1 text-xs">
                         {importResult.errors.map((err, idx) => (
-                          <li key={idx}>Row {err.row} - {err.sku}: {err.error}</li>
+                          <li key={idx} className="list-disc">
+                            Row {err.row} - {err.sku || 'N/A'}: {err.error}
+                          </li>
                         ))}
                       </ul>
                     </details>
@@ -828,6 +967,17 @@ const ProductsPage = () => {
           </div>
         </div>
       )}
+
+      {/* Bulk Image Import Modal */}
+      <BulkImageImport
+        isOpen={showBulkImageModal}
+        onClose={() => setShowBulkImageModal(false)}
+        onSuccess={() => {
+          fetchProducts(pagination.currentPage);
+          // Optionally close modal after success
+          // setTimeout(() => setShowBulkImageModal(false), 3000);
+        }}
+      />
     </div>
   );
 };

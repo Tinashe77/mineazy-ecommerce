@@ -24,6 +24,7 @@ import ContactMessagesPage from './components/dashboard/ContactMessagesPage';
 import ContactMessageDetail from './components/dashboard/ContactMessageDetail';
 import EmailManagementPage from './components/dashboard/EmailManagementPage';
 import SettingsPage from './components/dashboard/SettingsPage';
+import MediaPage from './components/dashboard/MediaPage';
 
 
 
@@ -64,6 +65,7 @@ const App = () => {
         <Route path="contact" element={<ContactMessagesPage />} />
         <Route path="contact/:id" element={<ContactMessageDetail />} />
         <Route path="emails" element={<EmailManagementPage />} />
+        <Route path="media" element={<MediaPage />} />
         <Route path="settings" element={<SettingsPage />} />
 
 

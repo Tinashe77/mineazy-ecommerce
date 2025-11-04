@@ -1,7 +1,7 @@
 // src/services/orders.js - FIXED VERSION
 const API_BASE_URL = import.meta.env.MODE === 'production' 
   ? 'https://mining-equipment-backend.onrender.com' 
-  : '';
+  : 'http://localhost:3000';
 
 const API_URL = `${API_BASE_URL}/api/orders`;
 const ADMIN_URL = `${API_BASE_URL}/api/admin/orders`;

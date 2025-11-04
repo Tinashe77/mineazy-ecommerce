@@ -1,7 +1,7 @@
 // src/services/products.js - COMPLETE FIX
-const API_BASE_URL = import.meta.env.MODE === 'production' 
-  ? 'https://mining-equipment-backend.onrender.com' 
-  : '';
+const API_BASE_URL = import.meta.env.MODE === 'production'
+  ? 'https://mining-equipment-backend.onrender.com'
+  : 'http://localhost:3000';
 
 const API_URL = `${API_BASE_URL}/api/products`;
 const SEARCH_URL = `${API_BASE_URL}/api/search`;
@@ -233,14 +233,48 @@ export const downloadUpdateSampleCSV = async (token) => {
         'Authorization': `Bearer ${token}`,
       },
     });
-    
+
     if (!response.ok) {
       throw new Error('Failed to download update sample CSV');
     }
-    
+
     return await response.blob();
   } catch (error) {
     console.error('Failed to download update sample CSV:', error);
     return null;
+  }
+};
+
+/**
+ * Bulk upload images and assign to products
+ * @param {string} token - Authentication token
+ * @param {Array<File>} imageFiles - Array of image files
+ * @param {Object} mapping - Mapping of filename to product ID { "filename.jpg": "productId" }
+ * @returns {Promise<Object>} Upload results
+ */
+export const bulkUploadImages = async (token, imageFiles, mapping) => {
+  try {
+    const formData = new FormData();
+
+    // Append all image files
+    imageFiles.forEach(file => {
+      formData.append('images', file);
+    });
+
+    // Append mapping data as JSON string
+    formData.append('mapping', JSON.stringify(mapping));
+
+    const response = await fetch(`${API_URL}/bulk-images`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        // NO Content-Type header - browser sets it automatically with boundary
+      },
+      body: formData,
+    });
+
+    return await handleResponse(response);
+  } catch (error) {
+    return { success: false, message: error.message };
   }
 };
