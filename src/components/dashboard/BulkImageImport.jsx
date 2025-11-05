@@ -412,7 +412,7 @@ const BulkImageImport = ({ isOpen, onClose, onSuccess }) => {
   const [showDropdown, setShowDropdown] = useState({}); // { filename: boolean }
   const [highlightedIndex, setHighlightedIndex] = useState({}); // { filename: number }
 
-  const getSearchResults = (filename) => {
+  const getSearchResults = (filename, selectedIds = []) => {
     const searchText = searchInputs[filename] || '';
     if (!searchText.trim()) return [];
 
@@ -420,7 +420,9 @@ const BulkImageImport = ({ isOpen, onClose, onSuccess }) => {
     return filteredProducts.filter(product => {
       const name = product.name?.toLowerCase() || '';
       const sku = product.sku?.toLowerCase() || '';
-      return name.includes(search) || sku.includes(search);
+      const matchesSearch = name.includes(search) || sku.includes(search);
+      const isNotSelected = !selectedIds.includes(product._id);
+      return matchesSearch && isNotSelected;
     }).slice(0, 10); // Limit to 10 results
   };
 
@@ -431,7 +433,7 @@ const BulkImageImport = ({ isOpen, onClose, onSuccess }) => {
   };
 
   const handleSearchKeyDown = (filename, event, selectedIds = []) => {
-    const results = getSearchResults(filename);
+    const results = getSearchResults(filename, selectedIds);
     const currentIndex = highlightedIndex[filename] || 0;
 
     if (event.key === 'ArrowDown') {
@@ -450,7 +452,7 @@ const BulkImageImport = ({ isOpen, onClose, onSuccess }) => {
       event.preventDefault();
       if (results.length > 0) {
         const product = results[currentIndex];
-        if (product && !selectedIds.includes(product._id)) {
+        if (product) {
           handleAddProduct(filename, product._id, selectedIds);
         }
       }
@@ -481,7 +483,7 @@ const BulkImageImport = ({ isOpen, onClose, onSuccess }) => {
   };
 
   const renderProductSelect = (filename, selectedIds = []) => {
-    const searchResults = getSearchResults(filename);
+    const searchResults = getSearchResults(filename, selectedIds);
     const isDropdownVisible = showDropdown[filename] && searchResults.length > 0;
     const searchValue = searchInputs[filename] || '';
     const currentHighlightedIndex = highlightedIndex[filename] || 0;
@@ -549,7 +551,6 @@ const BulkImageImport = ({ isOpen, onClose, onSuccess }) => {
           {isDropdownVisible && (
             <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-y-auto">
               {searchResults.map((product, index) => {
-                const isSelected = selectedIds.includes(product._id);
                 const isHighlighted = index === currentHighlightedIndex;
 
                 return (
@@ -559,15 +560,10 @@ const BulkImageImport = ({ isOpen, onClose, onSuccess }) => {
                     onMouseDown={(e) => {
                       // Use onMouseDown instead of onClick to fire before onBlur
                       e.preventDefault();
-                      if (!isSelected) {
-                        handleAddProduct(filename, product._id, selectedIds);
-                      }
+                      handleAddProduct(filename, product._id, selectedIds);
                     }}
-                    disabled={isSelected}
                     className={`w-full text-left px-3 py-2 text-sm transition-colors ${
-                      isSelected
-                        ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                        : isHighlighted
+                      isHighlighted
                         ? 'bg-indigo-100 text-indigo-900'
                         : 'hover:bg-gray-50 text-gray-900'
                     }`}
@@ -575,9 +571,6 @@ const BulkImageImport = ({ isOpen, onClose, onSuccess }) => {
                     <div className="font-medium">{product.name}</div>
                     {product.sku && (
                       <div className="text-xs text-gray-500 mt-0.5">SKU: {product.sku}</div>
-                    )}
-                    {isSelected && (
-                      <div className="text-xs text-gray-500 mt-0.5">Already selected</div>
                     )}
                   </button>
                 );
