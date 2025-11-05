@@ -58,9 +58,16 @@ export const getProfile = async (token) => {
         Authorization: `Bearer ${token}`,
       },
     });
+
+    // If unauthorized (401), token is invalid
+    if (response.status === 401) {
+      return { success: false, message: 'Invalid or expired token', unauthorized: true };
+    }
+
     return await handleResponse(response);
   } catch (error) {
-    return { success: false, message: error.message };
+    // Network error or other issue - don't mark as unauthorized
+    return { success: false, message: error.message, networkError: true };
   }
 };
 

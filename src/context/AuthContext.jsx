@@ -12,27 +12,40 @@ import {
 export const AuthContext = createContext();
 
 export const AuthProvider = ({ children }) => {
-  const [user, setUser] = useState(null);
+  const [user, setUser] = useState(() => {
+    const storedUser = localStorage.getItem('user');
+    return storedUser ? JSON.parse(storedUser) : null;
+  });
   const [token, setToken] = useState(localStorage.getItem('token'));
   const [loading, setLoading] = useState(true);
 
   const refreshUser = async () => {
     const storedToken = localStorage.getItem('token');
-    
+
     if (storedToken) {
       setLoading(true);
+      setToken(storedToken);
       try {
         const response = await getProfile(storedToken);
         if (response && response.id) {
           setUser(response);
-          setToken(storedToken);
-        } else {
-          // Invalid token or user not found
+          localStorage.setItem('user', JSON.stringify(response));
+        } else if (response && response.unauthorized) {
+          // Only logout if the token is explicitly invalid (401 unauthorized)
+          console.error('Token expired or invalid:', response.message);
           logout();
+        } else if (response && response.networkError) {
+          // Network error - keep the user logged in, they can retry later
+          console.warn('Network error on refresh:', response.message);
+          // Keep token and loading will complete
+        } else if (response && response.success === false) {
+          // Other server error - log but don't logout
+          console.error('Server error on refresh:', response.message);
+          // Keep token, user can retry later
         }
       } catch (error) {
         console.error('Failed to refresh user:', error);
-        logout();
+        // Don't logout on unexpected errors
       } finally {
         setLoading(false);
       }
@@ -52,6 +65,9 @@ export const AuthProvider = ({ children }) => {
         localStorage.setItem('token', response.token);
         setToken(response.token);
         setUser(response.user);
+        if (response.user) {
+          localStorage.setItem('user', JSON.stringify(response.user));
+        }
       }
       return response;
     } catch (error) {
@@ -67,6 +83,9 @@ export const AuthProvider = ({ children }) => {
         localStorage.setItem('token', response.token);
         setToken(response.token);
         setUser(response.user);
+        if (response.user) {
+          localStorage.setItem('user', JSON.stringify(response.user));
+        }
       }
       return response;
     } catch (error) {
@@ -79,6 +98,7 @@ export const AuthProvider = ({ children }) => {
     setToken(null);
     setUser(null);
     localStorage.removeItem('token');
+    localStorage.removeItem('user');
   };
 
   const forgotPassword = async (email) => {

@@ -572,7 +572,7 @@ const MediaPage = () => {
           <button
             onClick={() => fetchMedia(pagination.currentPage - 1)}
             disabled={!pagination.hasPrev}
-            className="px-4 py-2 bg-white border rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+            className="px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
           >
             Previous
           </button>
@@ -586,11 +586,11 @@ const MediaPage = () => {
                 (page >= pagination.currentPage - 1 && page <= pagination.currentPage + 1);
 
               if (!showPage && page === 2) {
-                return <span key={page} className="px-3 py-2">...</span>;
+                return <span key={page} className="px-3 py-2 text-gray-500">...</span>;
               }
 
               if (!showPage && page === pagination.totalPages - 1) {
-                return <span key={page} className="px-3 py-2">...</span>;
+                return <span key={page} className="px-3 py-2 text-gray-500">...</span>;
               }
 
               if (!showPage) return null;
@@ -601,8 +601,8 @@ const MediaPage = () => {
                   onClick={() => fetchMedia(page)}
                   className={`px-4 py-2 border rounded-lg ${
                     pagination.currentPage === page
-                      ? 'bg-indigo-600 text-white'
-                      : 'bg-white hover:bg-gray-50'
+                      ? 'bg-indigo-600 text-white border-indigo-600'
+                      : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
                   }`}
                 >
                   {page}
@@ -614,7 +614,7 @@ const MediaPage = () => {
           <button
             onClick={() => fetchMedia(pagination.currentPage + 1)}
             disabled={!pagination.hasNext}
-            className="px-4 py-2 bg-white border rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+            className="px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
           >
             Next
           </button>
