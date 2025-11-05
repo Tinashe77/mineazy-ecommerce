@@ -1,7 +1,5 @@
 // src/services/media.js
-const API_BASE_URL = import.meta.env.MODE === 'production'
-  ? 'https://mining-equipment-backend.onrender.com'
-  : 'http://localhost:3000';
+const API_BASE_URL = 'https://mining-equipment-backend.onrender.com';
 
 const API_URL = `${API_BASE_URL}/api/media`;
 
@@ -125,15 +123,18 @@ export const updateMedia = async (token, id, data) => {
  * @param {string} id - Media ID
  * @returns {Promise<Object>} Deletion result
  */
-export const deleteMedia = async (token, id) => {
+export const deleteMedia = async (token, id, options = {}) => {
   try {
-    const response = await fetch(`${API_URL}/${id}`, {
+    const requestInit = {
       method: 'DELETE',
       headers: {
         'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json',
       },
-    });
+    };
+
+    const forceSuffix = options.force ? '?force=true' : '';
+    const response = await fetch(`${API_URL}/${id}${forceSuffix}`, requestInit);
     return await handleResponse(response);
   } catch (error) {
     return { success: false, message: error.message };
@@ -146,15 +147,21 @@ export const deleteMedia = async (token, id) => {
  * @param {Array<string>} mediaIds - Array of media IDs to delete
  * @returns {Promise<Object>} Bulk deletion results
  */
-export const bulkDeleteMedia = async (token, mediaIds) => {
+export const bulkDeleteMedia = async (token, mediaIds, options = {}) => {
   try {
+    const payload = { mediaIds };
+
+    if (options.force) {
+      payload.force = true;
+    }
+
     const response = await fetch(`${API_URL}/bulk-delete`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ mediaIds }),
+      body: JSON.stringify(payload),
     });
     return await handleResponse(response);
   } catch (error) {

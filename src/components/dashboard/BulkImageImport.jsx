@@ -65,7 +65,7 @@ const BulkImageImport = ({ isOpen, onClose, onSuccess }) => {
   const [filteredProducts, setFilteredProducts] = useState([]);
 
   const [uploadedFiles, setUploadedFiles] = useState([]);
-  const [imageMatches, setImageMatches] = useState({}); // { filename: { productId, confidence, productName } }
+  const [imageMatches, setImageMatches] = useState({}); // { filename: { products: [{ id, name, sku }], confidence, isManual, matchMethod } }
   const [unmatched, setUnmatched] = useState([]);
 
   const [loading, setLoading] = useState(false);
@@ -188,6 +188,98 @@ const BulkImageImport = ({ isOpen, onClose, onSuccess }) => {
       .toUpperCase();
   };
 
+  const createMatchRecord = (productList = [], options = {}) => {
+    const seen = new Set();
+    const productsForRecord = [];
+
+    productList.forEach(product => {
+      if (!product || !product._id || seen.has(product._id)) {
+        return;
+      }
+
+      productsForRecord.push({
+        id: product._id,
+        name: product.name,
+        sku: product.sku,
+      });
+
+      seen.add(product._id);
+    });
+
+    if (productsForRecord.length === 0) {
+      return null;
+    }
+
+    return {
+      products: productsForRecord,
+      confidence: options.confidence ?? 100,
+      isManual: options.isManual ?? false,
+      matchMethod: options.matchMethod || (options.isManual ? 'manual' : 'auto'),
+    };
+  };
+
+  const resolveProductsByIds = (ids = []) => {
+    if (!Array.isArray(ids)) {
+      return [];
+    }
+
+    const allProductsMap = new Map();
+
+    filteredProducts.forEach(product => {
+      allProductsMap.set(product._id, product);
+    });
+
+    products.forEach(product => {
+      if (!allProductsMap.has(product._id)) {
+        allProductsMap.set(product._id, product);
+      }
+    });
+
+    const resolved = [];
+    const seenIds = new Set();
+
+    ids.forEach(id => {
+      if (!id || seenIds.has(id)) return;
+      const product = allProductsMap.get(id);
+      if (product) {
+        resolved.push(product);
+        seenIds.add(id);
+      }
+    });
+
+    return resolved;
+  };
+
+  const setMatchForFile = (filename, matchRecord) => {
+    setImageMatches(prev => {
+      const next = { ...prev };
+      if (matchRecord) {
+        next[filename] = matchRecord;
+      } else {
+        delete next[filename];
+      }
+      return next;
+    });
+
+    setUnmatched(prev => {
+      if (matchRecord) {
+        return prev.filter(f => f !== filename);
+      }
+      return prev.includes(filename) ? prev : [...prev, filename];
+    });
+  };
+
+  const handleManualMatch = (filename, productIds = []) => {
+    const resolvedProducts = resolveProductsByIds(productIds);
+    const matchRecord = createMatchRecord(resolvedProducts, {
+      isManual: true,
+      confidence: 100,
+      matchMethod: 'manual',
+    });
+
+    setMatchForFile(filename, matchRecord);
+  };
+
   const performAutoMatching = (files) => {
     const matches = {};
     const unmatchedFiles = [];
@@ -241,16 +333,20 @@ const BulkImageImport = ({ isOpen, onClose, onSuccess }) => {
         }
       });
 
-      // Only auto-match if confidence is above 60%
       if (bestMatch && bestScore >= 60) {
-        matches[filename] = {
-          productId: bestMatch._id,
-          productName: bestMatch.name,
+        const matchRecord = createMatchRecord([bestMatch], {
           confidence: bestScore,
           isManual: false,
-          matchMethod: matchMethod
-        };
-      } else {
+          matchMethod,
+        });
+
+        if (matchRecord) {
+          matches[filename] = matchRecord;
+          return;
+        }
+      }
+
+      if (!unmatchedFiles.includes(filename)) {
         unmatchedFiles.push(filename);
       }
     });
@@ -259,55 +355,278 @@ const BulkImageImport = ({ isOpen, onClose, onSuccess }) => {
     setUnmatched(unmatchedFiles);
   };
 
-  const handleManualMatch = (filename, productId) => {
-    const product = filteredProducts.find(p => p._id === productId);
-    if (!product) return;
-
-    setImageMatches(prev => ({
-      ...prev,
-      [filename]: {
-        productId: product._id,
-        productName: product.name,
-        confidence: 100,
-        isManual: true
-      }
-    }));
-
-    setUnmatched(prev => prev.filter(f => f !== filename));
+  const handleProductSelectChange = (filename, event) => {
+    const selectedIds = Array.from(event.target.selectedOptions, option => option.value);
+    handleManualMatch(filename, selectedIds);
   };
 
-  const handleRemoveMatch = (filename) => {
-    setImageMatches(prev => {
-      const newMatches = { ...prev };
-      delete newMatches[filename];
-      return newMatches;
-    });
+  const formatProductLabel = (product) => {
+    if (!product) return '';
+    return product.sku ? `${product.name} (${product.sku})` : product.name;
+  };
 
-    if (!unmatched.includes(filename)) {
-      setUnmatched(prev => [...prev, filename]);
+  const describeMatch = (match) => {
+    if (!match) return '';
+
+    if (match.isManual || match.matchMethod === 'manual') {
+      const count = match.products?.length || 0;
+      return count > 1
+        ? `👤 Manual selection • ${count} products`
+        : '👤 Manual selection';
+    }
+
+    let methodLabel = 'auto-match';
+    switch (match.matchMethod) {
+      case 'exact-path':
+        methodLabel = 'existing image match';
+        break;
+      case 'exact-name':
+        methodLabel = 'filename match';
+        break;
+      case 'fuzzy':
+        methodLabel = 'fuzzy match';
+        break;
+      default:
+        methodLabel = match.matchMethod || 'auto-match';
+    }
+
+    return `🤖 Auto (${match.confidence}% • ${methodLabel})`;
+  };
+
+  // Search and autocomplete state
+  const [searchInputs, setSearchInputs] = useState({}); // { filename: searchText }
+  const [showDropdown, setShowDropdown] = useState({}); // { filename: boolean }
+  const [highlightedIndex, setHighlightedIndex] = useState({}); // { filename: number }
+
+  const getSearchResults = (filename) => {
+    const searchText = searchInputs[filename] || '';
+    if (!searchText.trim()) return [];
+
+    const search = searchText.toLowerCase();
+    return filteredProducts.filter(product => {
+      const name = product.name?.toLowerCase() || '';
+      const sku = product.sku?.toLowerCase() || '';
+      return name.includes(search) || sku.includes(search);
+    }).slice(0, 10); // Limit to 10 results
+  };
+
+  const handleSearchInputChange = (filename, value) => {
+    setSearchInputs(prev => ({ ...prev, [filename]: value }));
+    setShowDropdown(prev => ({ ...prev, [filename]: value.trim().length > 0 }));
+    setHighlightedIndex(prev => ({ ...prev, [filename]: 0 }));
+  };
+
+  const handleSearchKeyDown = (filename, event, selectedIds = []) => {
+    const results = getSearchResults(filename);
+    const currentIndex = highlightedIndex[filename] || 0;
+
+    if (event.key === 'ArrowDown') {
+      event.preventDefault();
+      setHighlightedIndex(prev => ({
+        ...prev,
+        [filename]: Math.min(currentIndex + 1, results.length - 1)
+      }));
+    } else if (event.key === 'ArrowUp') {
+      event.preventDefault();
+      setHighlightedIndex(prev => ({
+        ...prev,
+        [filename]: Math.max(currentIndex - 1, 0)
+      }));
+    } else if (event.key === 'Enter') {
+      event.preventDefault();
+      if (results.length > 0) {
+        const product = results[currentIndex];
+        if (product && !selectedIds.includes(product._id)) {
+          handleAddProduct(filename, product._id, selectedIds);
+        }
+      }
+    } else if (event.key === 'Escape') {
+      event.preventDefault();
+      setShowDropdown(prev => ({ ...prev, [filename]: false }));
     }
   };
 
+  const handleAddProduct = (filename, productId, currentSelectedIds = []) => {
+    if (!currentSelectedIds.includes(productId)) {
+      const newSelectedIds = [...currentSelectedIds, productId];
+      handleManualMatch(filename, newSelectedIds);
+    }
+    // Clear search input
+    setSearchInputs(prev => ({ ...prev, [filename]: '' }));
+    setShowDropdown(prev => ({ ...prev, [filename]: false }));
+    setHighlightedIndex(prev => ({ ...prev, [filename]: 0 }));
+  };
+
+  const handleRemoveProduct = (filename, productId, currentSelectedIds = []) => {
+    const newSelectedIds = currentSelectedIds.filter(id => id !== productId);
+    if (newSelectedIds.length > 0) {
+      handleManualMatch(filename, newSelectedIds);
+    } else {
+      handleRemoveMatch(filename);
+    }
+  };
+
+  const renderProductSelect = (filename, selectedIds = []) => {
+    const searchResults = getSearchResults(filename);
+    const isDropdownVisible = showDropdown[filename] && searchResults.length > 0;
+    const searchValue = searchInputs[filename] || '';
+    const currentHighlightedIndex = highlightedIndex[filename] || 0;
+
+    // Get selected products
+    const selectedProducts = selectedIds
+      .map(id => filteredProducts.find(p => p._id === id))
+      .filter(Boolean);
+
+    return (
+      <div className="mt-3">
+        <label className="text-xs font-medium text-gray-600 mb-1 block">
+          Search and assign products
+        </label>
+
+        {/* Selected products as pills */}
+        {selectedProducts.length > 0 && (
+          <div className="flex flex-wrap gap-2 mb-2 p-2 bg-gray-50 rounded-lg border border-gray-200">
+            {selectedProducts.map(product => (
+              <span
+                key={product._id}
+                className="inline-flex items-center gap-1.5 bg-indigo-100 text-indigo-800 px-2.5 py-1 rounded-full text-xs font-medium"
+              >
+                <span className="max-w-[200px] truncate">
+                  {formatProductLabel(product)}
+                </span>
+                <button
+                  onClick={() => handleRemoveProduct(filename, product._id, selectedIds)}
+                  className="hover:bg-indigo-200 rounded-full p-0.5 transition-colors"
+                  type="button"
+                >
+                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </span>
+            ))}
+          </div>
+        )}
+
+        {/* Search input with autocomplete */}
+        <div className="relative">
+          <input
+            type="text"
+            value={searchValue}
+            onChange={(e) => handleSearchInputChange(filename, e.target.value)}
+            onKeyDown={(e) => handleSearchKeyDown(filename, e, selectedIds)}
+            onFocus={() => {
+              if (searchValue.trim()) {
+                setShowDropdown(prev => ({ ...prev, [filename]: true }));
+              }
+            }}
+            onBlur={() => {
+              // Delay to allow click events on dropdown items to fire first
+              setTimeout(() => {
+                setShowDropdown(prev => ({ ...prev, [filename]: false }));
+              }, 200);
+            }}
+            placeholder="Type to search products..."
+            className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+            disabled={filteredProducts.length === 0}
+          />
+
+          {/* Autocomplete dropdown */}
+          {isDropdownVisible && (
+            <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+              {searchResults.map((product, index) => {
+                const isSelected = selectedIds.includes(product._id);
+                const isHighlighted = index === currentHighlightedIndex;
+
+                return (
+                  <button
+                    key={product._id}
+                    type="button"
+                    onMouseDown={(e) => {
+                      // Use onMouseDown instead of onClick to fire before onBlur
+                      e.preventDefault();
+                      if (!isSelected) {
+                        handleAddProduct(filename, product._id, selectedIds);
+                      }
+                    }}
+                    disabled={isSelected}
+                    className={`w-full text-left px-3 py-2 text-sm transition-colors ${
+                      isSelected
+                        ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                        : isHighlighted
+                        ? 'bg-indigo-100 text-indigo-900'
+                        : 'hover:bg-gray-50 text-gray-900'
+                    }`}
+                  >
+                    <div className="font-medium">{product.name}</div>
+                    {product.sku && (
+                      <div className="text-xs text-gray-500 mt-0.5">SKU: {product.sku}</div>
+                    )}
+                    {isSelected && (
+                      <div className="text-xs text-gray-500 mt-0.5">Already selected</div>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          )}
+        </div>
+
+        <p className="text-xs text-gray-500 mt-1">
+          Type to search, then press Enter or click to add. Press Escape to close.
+        </p>
+      </div>
+    );
+  };
+
+  const handleRemoveMatch = (filename) => {
+    setMatchForFile(filename, null);
+  };
+
   const handleUpload = async () => {
-    if (Object.keys(imageMatches).length === 0) {
+    const hasValidMatch = Object.values(imageMatches).some(
+      match => Array.isArray(match?.products) && match.products.length > 0
+    );
+
+    if (!hasValidMatch) {
       setError('Please match at least one image to a product');
       return;
     }
 
     setUploading(true);
     setError(null);
+    setResult(null);
 
     try {
-      // Build mapping object
+      // Build mapping object using arrays of product IDs
       const mapping = {};
       Object.entries(imageMatches).forEach(([filename, match]) => {
-        mapping[filename] = match.productId;
+        const productIds = Array.isArray(match?.products)
+          ? match.products.map(product => product.id).filter(Boolean)
+          : [];
+
+        if (productIds.length > 0) {
+          mapping[filename] = productIds;
+        }
       });
 
+      if (Object.keys(mapping).length === 0) {
+        setError('Please match at least one image to a product');
+        setUploading(false);
+        return;
+      }
+
       // Filter files to only include matched ones
-      const filesToUpload = uploadedFiles.filter(file =>
-        mapping[file.name] !== undefined
-      );
+      const filesToUpload = uploadedFiles.filter(file => {
+        const mapped = mapping[file.name];
+        return Array.isArray(mapped) && mapped.length > 0;
+      });
+
+      if (filesToUpload.length === 0) {
+        setError('No matched files found. Please re-select your images and try again.');
+        setUploading(false);
+        return;
+      }
 
       const response = await bulkUploadImages(token, filesToUpload, mapping);
 
@@ -335,13 +654,34 @@ const BulkImageImport = ({ isOpen, onClose, onSuccess }) => {
     setSelectedCategory('');
     setProducts([]);
     setFilteredProducts([]);
+    // Clear search state
+    setSearchInputs({});
+    setShowDropdown({});
+    setHighlightedIndex({});
     onClose();
   };
 
   if (!isOpen) return null;
 
-  const matchedCount = Object.keys(imageMatches).length;
+  const matchedCount = Object.values(imageMatches).filter(
+    match => Array.isArray(match?.products) && match.products.length > 0
+  ).length;
+  const totalAssignmentsSelected = Object.values(imageMatches).reduce((sum, match) => {
+    if (!Array.isArray(match?.products)) {
+      return sum;
+    }
+    return sum + match.products.filter(product => Boolean(product?.id)).length;
+  }, 0);
   const totalFiles = uploadedFiles.length;
+  const productNameById = {};
+
+  if (result?.productsUpdated) {
+    result.productsUpdated.forEach(productUpdate => {
+      if (productUpdate?.productId) {
+        productNameById[productUpdate.productId] = productUpdate.productName;
+      }
+    });
+  }
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
@@ -440,15 +780,148 @@ const BulkImageImport = ({ isOpen, onClose, onSuccess }) => {
 
         {/* Result Display */}
         {result && (
-          <div className="mb-4 p-4 bg-green-50 border border-green-200 rounded-lg">
-            <p className="font-semibold text-green-900 mb-2">✅ Upload Complete!</p>
-            <div className="text-sm text-green-700 space-y-1">
-              <p>• {result.uploaded} images uploaded successfully</p>
-              <p>• {result.productsUpdated?.length} products updated</p>
-              {result.failed > 0 && (
-                <p className="text-red-700">• {result.failed} images failed</p>
-              )}
+          <div className="mb-6 space-y-4">
+            <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
+              <p className="font-semibold text-green-900 text-base">✅ Bulk image upload complete</p>
+              <div className="mt-2 text-sm text-green-800 space-y-1">
+                <p>
+                  • {result.uploaded ?? 0} product assignment{(result.uploaded ?? 0) === 1 ? '' : 's'} processed
+                </p>
+                <p>
+                  • {(result.fileMappings?.length ?? 0)} file{(result.fileMappings?.length ?? 0) === 1 ? '' : 's'} stored on Cloudinary
+                </p>
+                <p>
+                  • {(result.productsUpdated?.length ?? 0)} product{(result.productsUpdated?.length ?? 0) === 1 ? '' : 's'} updated
+                </p>
+                {result.failed > 0 && (
+                  <p className="text-red-700">
+                    • {result.failed} assignment{result.failed === 1 ? '' : 's'} failed
+                  </p>
+                )}
+              </div>
             </div>
+
+            {Array.isArray(result.errors) && result.errors.length > 0 && (
+              <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
+                <h4 className="text-sm font-semibold text-red-800 mb-2">Needs attention</h4>
+                <ul className="list-disc list-inside text-sm text-red-700 space-y-1">
+                  {result.errors.map((err, index) => {
+                    if (typeof err === 'string') {
+                      return <li key={`error-${index}`}>{err}</li>;
+                    }
+                    const fileName = err?.fileName || err?.filename || err?.originalName || 'Image';
+                    const reason = err?.message || err?.reason || 'Unknown error';
+                    return (
+                      <li key={`error-${index}`}>
+                        <span className="font-medium">{fileName}:</span> {reason}
+                      </li>
+                    );
+                  })}
+                </ul>
+                <p className="text-xs text-red-600 mt-2">
+                  Adjust the mapping for these files and re-upload to retry.
+                </p>
+              </div>
+            )}
+
+            {Array.isArray(result.fileMappings) && result.fileMappings.length > 0 && (
+              <div className="p-4 bg-white border border-gray-200 rounded-lg shadow-sm">
+                <h4 className="text-sm font-semibold text-gray-800 mb-3">Stored on Cloudinary</h4>
+                <div className="space-y-3 max-h-60 overflow-y-auto pr-1">
+                  {result.fileMappings.map((mapping, index) => {
+                    const productIds = mapping?.productIds || [];
+                    const cloudinaryUrl = mapping?.absoluteUrl || mapping?.storedUrl;
+                    return (
+                      <div
+                        key={`mapping-${index}`}
+                        className="border border-gray-200 rounded-lg p-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2"
+                      >
+                        <div>
+                          <p className="text-sm font-medium text-gray-900 break-all">{mapping.originalName}</p>
+                          <p className="text-xs text-gray-500">
+                            {productIds.length} product{productIds.length === 1 ? '' : 's'}
+                          </p>
+                          {productIds.length > 0 && (
+                            <div className="mt-2 flex flex-wrap gap-2">
+                              {productIds.map((id, productIndex) => {
+                                const label = productNameById[id] || id;
+                                return (
+                                  <span
+                                    key={`mapping-${index}-product-${id}-${productIndex}`}
+                                    className="bg-gray-100 text-gray-700 px-2 py-1 rounded-full text-xs"
+                                  >
+                                    {label}
+                                  </span>
+                                );
+                              })}
+                            </div>
+                          )}
+                        </div>
+                        {cloudinaryUrl && (
+                          <a
+                            href={cloudinaryUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-sm font-medium text-indigo-600 hover:text-indigo-500"
+                          >
+                            View image
+                          </a>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {Array.isArray(result.productsUpdated) && result.productsUpdated.length > 0 && (
+              <div className="p-4 bg-white border border-gray-200 rounded-lg shadow-sm">
+                <h4 className="text-sm font-semibold text-gray-800 mb-3">Products updated</h4>
+                <div className="space-y-3 max-h-60 overflow-y-auto pr-1">
+                  {result.productsUpdated.map((product) => {
+                    const imagesAddedCount = product.imagesAdded ?? (product.imageDetails?.length ?? 0);
+                    const totalImagesCount = product.totalImages ?? '-';
+
+                    return (
+                      <details
+                        key={product.productId}
+                        className="border border-gray-200 rounded-lg p-3 bg-gray-50"
+                      >
+                        <summary className="cursor-pointer text-sm font-medium text-gray-800">
+                          {product.productName || product.productId}{' '}
+                          <span className="text-xs text-gray-500">
+                            (+{imagesAddedCount} image{imagesAddedCount === 1 ? '' : 's'} • total {totalImagesCount})
+                          </span>
+                        </summary>
+                        {Array.isArray(product.imageDetails) && product.imageDetails.length > 0 && (
+                          <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+                            {product.imageDetails.map((detail, imageIndex) => {
+                              const imageUrl = detail?.absoluteUrl || detail?.storedUrl;
+                              if (!imageUrl) return null;
+                              return (
+                                <a
+                                  key={`${product.productId}-${imageIndex}`}
+                                  href={imageUrl}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="block border border-gray-200 rounded-lg overflow-hidden hover:border-indigo-400"
+                                >
+                                  <img
+                                    src={imageUrl}
+                                    alt={`${product.productName || product.productId} preview ${imageIndex + 1}`}
+                                    className="w-full h-32 object-cover"
+                                  />
+                                </a>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </details>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
           </div>
         )}
 
@@ -456,8 +929,13 @@ const BulkImageImport = ({ isOpen, onClose, onSuccess }) => {
         {uploadedFiles.length > 0 && (
           <div className="mb-6">
             <div className="flex items-center justify-between mb-4">
-              <label className="text-sm font-medium text-gray-700">
-                Step 3: Review & Match ({matchedCount}/{totalFiles} matched)
+              <label className="text-sm font-semibold text-gray-700">
+                Step 3: Review & Match{' '}
+                {totalFiles > 0 && (
+                  <span className="font-normal text-gray-600">
+                    ({matchedCount}/{totalFiles} images matched • {totalAssignmentsSelected} assignments)
+                  </span>
+                )}
               </label>
               <span className={`text-sm font-semibold ${
                 unmatched.length > 0 ? 'text-yellow-600' : 'text-green-600'
@@ -471,33 +949,64 @@ const BulkImageImport = ({ isOpen, onClose, onSuccess }) => {
               <div className="mb-4">
                 <h4 className="text-sm font-semibold text-gray-700 mb-2">✓ Matched Images</h4>
                 <div className="space-y-2 max-h-60 overflow-y-auto">
-                  {Object.entries(imageMatches).map(([filename, match]) => {
-                    const file = uploadedFiles.find(f => f.name === filename);
-                    const preview = file ? URL.createObjectURL(file) : null;
+                  {Object.entries(imageMatches)
+                    .filter(([, match]) => Array.isArray(match?.products) && match.products.length > 0)
+                    .map(([filename, match]) => {
+                      const file = uploadedFiles.find(f => f.name === filename);
+                      const preview = file ? URL.createObjectURL(file) : null;
+                      const selectedProducts = match.products || [];
+                      const selectedIds = selectedProducts.map(product => product.id);
 
-                    return (
-                      <div key={filename} className="flex items-center gap-3 p-3 bg-green-50 border border-green-200 rounded-lg">
-                        {preview && (
-                          <img src={preview} alt={filename} className="w-16 h-16 object-cover rounded" />
-                        )}
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium text-gray-900 truncate">{filename}</p>
-                          <p className="text-sm text-gray-600">→ {match.productName}</p>
-                          <p className="text-xs text-gray-500">
-                            {match.isManual ? '👤 Manual' : `🤖 Auto (${match.confidence}% confidence)`}
-                          </p>
-                        </div>
-                        <button
-                          onClick={() => handleRemoveMatch(filename)}
-                          className="text-red-600 hover:text-red-800"
+                      return (
+                        <div
+                          key={filename}
+                          className="flex flex-col sm:flex-row gap-4 p-4 bg-green-50 border border-green-200 rounded-lg"
                         >
-                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                          </svg>
-                        </button>
-                      </div>
-                    );
-                  })}
+                          {preview && (
+                            <img
+                              src={preview}
+                              alt={filename}
+                              className="w-20 h-20 object-cover rounded shadow-sm"
+                            />
+                          )}
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-semibold text-gray-900 break-all">{filename}</p>
+                            <p className="text-xs text-gray-600 mt-1">{describeMatch(match)}</p>
+
+                            {selectedProducts.length > 0 && (
+                              <div className="mt-3 flex flex-wrap gap-2">
+                                {selectedProducts.map(product => (
+                                  <span
+                                    key={product.id}
+                                    className="inline-flex items-center gap-2 bg-green-100 text-green-800 px-2 py-1 rounded-full text-xs font-medium"
+                                  >
+                                    <span className="truncate max-w-[12rem]">{product.name}</span>
+                                    {product.sku && (
+                                      <span className="text-[10px] text-green-700 uppercase tracking-wide">
+                                        SKU {product.sku}
+                                      </span>
+                                    )}
+                                  </span>
+                                ))}
+                              </div>
+                            )}
+
+                            {renderProductSelect(filename, selectedIds)}
+                          </div>
+                          <div className="flex sm:flex-col gap-2 sm:items-end">
+                            <button
+                              onClick={() => handleRemoveMatch(filename)}
+                              className="text-sm font-medium text-red-600 hover:text-red-700 flex items-center gap-1"
+                            >
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                              </svg>
+                              Clear
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })}
                 </div>
               </div>
             )}
@@ -512,23 +1021,24 @@ const BulkImageImport = ({ isOpen, onClose, onSuccess }) => {
                     const preview = file ? URL.createObjectURL(file) : null;
 
                     return (
-                      <div key={filename} className="flex items-center gap-3 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                      <div
+                        key={filename}
+                        className="flex flex-col sm:flex-row gap-4 p-4 bg-yellow-50 border border-yellow-200 rounded-lg"
+                      >
                         {preview && (
-                          <img src={preview} alt={filename} className="w-16 h-16 object-cover rounded" />
+                          <img
+                            src={preview}
+                            alt={filename}
+                            className="w-20 h-20 object-cover rounded shadow-sm"
+                          />
                         )}
                         <div className="flex-1">
-                          <p className="text-sm font-medium text-gray-900 mb-2">{filename}</p>
-                          <select
-                            onChange={(e) => handleManualMatch(filename, e.target.value)}
-                            className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
-                          >
-                            <option value="">-- Select product --</option>
-                            {filteredProducts.map(product => (
-                              <option key={product._id} value={product._id}>
-                                {product.name} ({product.sku})
-                              </option>
-                            ))}
-                          </select>
+                          <p className="text-sm font-semibold text-gray-900 break-all">{filename}</p>
+                          <p className="text-xs text-yellow-800 mt-1">
+                            Select one or more products to assign this image.
+                          </p>
+
+                          {renderProductSelect(filename, [])}
                         </div>
                       </div>
                     );

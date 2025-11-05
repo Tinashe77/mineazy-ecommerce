@@ -4,6 +4,45 @@ import { AuthContext } from '../../context/AuthContext';
 import { getProducts, deleteProduct, bulkImportProducts, downloadSampleCSV, downloadUpdateSampleCSV } from '../../services/products';
 import { getCategories } from '../../services/categories';
 import BulkImageImport from './BulkImageImport';
+import AddProductImages from './AddProductImages';
+
+const CLOUDINARY_BASE_URL = 'https://res.cloudinary.com/probitymutsambiwa/image/upload/';
+const DEFAULT_PRODUCT_IMAGE = 'https://res.cloudinary.com/probitymutsambiwa/image/upload/v1759822323/mining-equipment/products/lm4r2ksmdutvh1s78v80.jpg';
+
+const resolveProductImageUrl = (image) => {
+  if (!image) {
+    return DEFAULT_PRODUCT_IMAGE;
+  }
+
+  if (typeof image === 'string') {
+    const trimmed = image.trim();
+    if (!trimmed) {
+      return DEFAULT_PRODUCT_IMAGE;
+    }
+
+    if (/^https?:\/\//i.test(trimmed)) {
+      return trimmed;
+    }
+
+    const normalizedPath = trimmed.replace(/^\/+/, '');
+    return `${CLOUDINARY_BASE_URL}${normalizedPath}`;
+  }
+
+  if (typeof image === 'object' && image !== null) {
+    return resolveProductImageUrl(image.secure_url || image.url || image.path || '');
+  }
+
+  return DEFAULT_PRODUCT_IMAGE;
+};
+
+const getProductImageSrc = (images) => {
+  if (Array.isArray(images)) {
+    const firstImage = images.find(Boolean);
+    return resolveProductImageUrl(firstImage);
+  }
+
+  return resolveProductImageUrl(images);
+};
 
 const ProductsPage = () => {
   const [products, setProducts] = useState([]);
@@ -43,6 +82,10 @@ const ProductsPage = () => {
 
   // Bulk image import state
   const [showBulkImageModal, setShowBulkImageModal] = useState(false);
+
+  // Add single product images state
+  const [showAddImagesModal, setShowAddImagesModal] = useState(false);
+  const [selectedProduct, setSelectedProduct] = useState(null);
 
   useEffect(() => {
     fetchCategories();
@@ -97,7 +140,7 @@ const ProductsPage = () => {
   const handleDelete = async (id) => {
     if (window.confirm('Are you sure you want to delete this product?')) {
       try {
-        const response = await deleteProduct(token, id);
+        const response = await deleteProduct(token, id, { force: true });
         
         if (response.success !== false) {
           fetchProducts(pagination.currentPage);
@@ -150,7 +193,7 @@ const ProductsPage = () => {
     // Delete products one by one
     for (const productId of selectedProducts) {
       try {
-        const response = await deleteProduct(token, productId);
+        const response = await deleteProduct(token, productId, { force: true });
         if (response.success !== false) {
           successCount++;
         } else {
@@ -578,7 +621,7 @@ const ProductsPage = () => {
                   </td>
                   <td className="py-3 px-6">
                     <img
-                      src={product.images?.[0] || '/placeholder-product.png'}
+                      src={getProductImageSrc(product.images)}
                       alt={product.name}
                       className="w-12 h-12 object-cover rounded"
                     />
@@ -606,6 +649,16 @@ const ProductsPage = () => {
                   </td>
                   <td className="py-3 px-6 text-center">
                     <div className="flex item-center justify-center gap-2">
+                      <button
+                        onClick={() => {
+                          setSelectedProduct(product);
+                          setShowAddImagesModal(true);
+                        }}
+                        className="text-purple-600 hover:text-purple-800 font-medium"
+                        title="Add Images"
+                      >
+                        Add Images
+                      </button>
                       <Link
                         to={`/dashboard/products/edit/${product._id}`}
                         className="text-blue-600 hover:text-blue-800 font-medium"
@@ -976,6 +1029,19 @@ LAPTOP001,Dell Laptop,High-performance laptop,1200.00,/images/laptop.jpg</pre>
           fetchProducts(pagination.currentPage);
           // Optionally close modal after success
           // setTimeout(() => setShowBulkImageModal(false), 3000);
+        }}
+      />
+
+      {/* Add Product Images Modal */}
+      <AddProductImages
+        isOpen={showAddImagesModal}
+        onClose={() => {
+          setShowAddImagesModal(false);
+          setSelectedProduct(null);
+        }}
+        product={selectedProduct}
+        onSuccess={() => {
+          fetchProducts(pagination.currentPage);
         }}
       />
     </div>

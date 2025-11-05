@@ -193,7 +193,7 @@ const MediaPage = () => {
     }
 
     try {
-      const response = await deleteMedia(token, id);
+      const response = await deleteMedia(token, id, { force: true });
 
       if (response.message) {
         fetchMedia(pagination.currentPage);
@@ -219,7 +219,7 @@ const MediaPage = () => {
     }
 
     try {
-      const response = await bulkDeleteMedia(token, selectedMedia);
+      const response = await bulkDeleteMedia(token, selectedMedia, { force: true });
 
       if (response.results) {
         const { deleted, failed } = response.results;

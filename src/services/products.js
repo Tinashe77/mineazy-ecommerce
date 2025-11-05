@@ -1,7 +1,5 @@
 // src/services/products.js - COMPLETE FIX
-const API_BASE_URL = import.meta.env.MODE === 'production'
-  ? 'https://mining-equipment-backend.onrender.com'
-  : 'http://localhost:3000';
+const API_BASE_URL = 'https://mining-equipment-backend.onrender.com';
 
 const API_URL = `${API_BASE_URL}/api/products`;
 const SEARCH_URL = `${API_BASE_URL}/api/search`;
@@ -123,15 +121,18 @@ export const updateProduct = async (token, id, productData) => {
   }
 };
 
-export const deleteProduct = async (token, id) => {
+export const deleteProduct = async (token, id, options = {}) => {
   try {
-    const response = await fetch(`${API_URL}/${id}`, {
+    const requestInit = {
       method: 'DELETE',
       headers: {
         'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json',
       },
-    });
+    };
+
+    const forceSuffix = options.force ? '?force=true' : '';
+    const response = await fetch(`${API_URL}/${id}${forceSuffix}`, requestInit);
     return await handleResponse(response);
   } catch (error) {
     return { success: false, message: error.message };
