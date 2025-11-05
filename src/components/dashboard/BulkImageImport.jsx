@@ -3,6 +3,8 @@ import { AuthContext } from '../../context/AuthContext';
 import { bulkUploadImages } from '../../services/products';
 import { getCategories } from '../../services/categories';
 
+const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp', 'image/avif'];
+
 // Fuzzy matching function - calculates similarity between two strings
 const fuzzyMatch = (str1, str2) => {
   const s1 = str1.toLowerCase().trim();
@@ -152,13 +154,20 @@ const BulkImageImport = ({ isOpen, onClose, onSuccess }) => {
   };
 
   const handleFiles = (files) => {
-    // Filter only image files
-    const imageFiles = files.filter(file =>
-      file.type.startsWith('image/')
-    );
+    // Filter only allowed image files
+    const validFiles = [];
+    const invalidFiles = [];
 
-    if (imageFiles.length === 0) {
-      setError('No valid image files selected');
+    files.forEach(file => {
+      if (ALLOWED_IMAGE_TYPES.includes(file.type)) {
+        validFiles.push(file);
+      } else {
+        invalidFiles.push(file.name);
+      }
+    });
+
+    if (validFiles.length === 0) {
+      setError('No valid image files selected. Only JPEG, PNG, GIF, WebP, and AVIF are allowed.');
       return;
     }
 
@@ -172,9 +181,14 @@ const BulkImageImport = ({ isOpen, onClose, onSuccess }) => {
       return;
     }
 
-    setUploadedFiles(imageFiles);
-    performAutoMatching(imageFiles);
-    setError(null);
+    if (invalidFiles.length > 0) {
+      setError(`Skipped ${invalidFiles.length} invalid file(s). Only JPEG, PNG, GIF, WebP, and AVIF are allowed.`);
+    } else {
+      setError(null);
+    }
+
+    setUploadedFiles(validFiles);
+    performAutoMatching(validFiles);
   };
 
   // Convert product name to filename format (reverse of CSV import)
@@ -758,14 +772,14 @@ const BulkImageImport = ({ isOpen, onClose, onSuccess }) => {
                   <input
                     type="file"
                     multiple
-                    accept="image/*"
+                    accept=".jpg,.jpeg,.png,.gif,.webp,.avif"
                     onChange={handleFileInput}
                     className="hidden"
                   />
                 </label>
               </p>
               <p className="mt-1 text-xs text-gray-500">
-                Supported: JPG, PNG, GIF, WebP (max 5MB each)
+                Supported: JPEG, PNG, GIF, WebP, AVIF (max 5MB each)
               </p>
             </div>
           </div>

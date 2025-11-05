@@ -2,6 +2,8 @@ import { useState, useContext } from 'react';
 import { AuthContext } from '../../context/AuthContext';
 import { updateProduct } from '../../services/products';
 
+const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp', 'image/avif'];
+
 const AddProductImages = ({ isOpen, onClose, product, onSuccess }) => {
   const { token } = useContext(AuthContext);
   const [selectedFiles, setSelectedFiles] = useState([]);
@@ -35,25 +37,38 @@ const AddProductImages = ({ isOpen, onClose, product, onSuccess }) => {
   };
 
   const handleFiles = (files) => {
-    const imageFiles = files.filter(file => file.type.startsWith('image/'));
+    const validFiles = [];
+    const invalidFiles = [];
 
-    if (imageFiles.length === 0) {
-      setError('Please select valid image files');
+    files.forEach(file => {
+      if (ALLOWED_IMAGE_TYPES.includes(file.type)) {
+        validFiles.push(file);
+      } else {
+        invalidFiles.push(file.name);
+      }
+    });
+
+    if (validFiles.length === 0) {
+      setError('Please select valid image files (JPEG, PNG, GIF, WebP, AVIF)');
       return;
     }
 
-    setSelectedFiles(prev => [...prev, ...imageFiles]);
+    if (invalidFiles.length > 0) {
+      setError(`Skipped ${invalidFiles.length} invalid file(s). Only JPEG, PNG, GIF, WebP, and AVIF are allowed.`);
+    } else {
+      setError(null);
+    }
+
+    setSelectedFiles(prev => [...prev, ...validFiles]);
 
     // Create previews
-    imageFiles.forEach(file => {
+    validFiles.forEach(file => {
       const reader = new FileReader();
       reader.onloadend = () => {
         setPreviews(prev => [...prev, { name: file.name, url: reader.result }]);
       };
       reader.readAsDataURL(file);
     });
-
-    setError(null);
   };
 
   const handleRemoveFile = (index) => {
@@ -169,14 +184,14 @@ const AddProductImages = ({ isOpen, onClose, product, onSuccess }) => {
                 <input
                   type="file"
                   multiple
-                  accept="image/*"
+                  accept=".jpg,.jpeg,.png,.gif,.webp,.avif"
                   onChange={handleFileInput}
                   className="hidden"
                 />
               </label>
             </p>
             <p className="mt-1 text-xs text-gray-500">
-              Supported: JPG, PNG, GIF, WebP (max 5MB each)
+              Supported: JPEG, PNG, GIF, WebP, AVIF (max 5MB each)
             </p>
           </div>
         </div>
