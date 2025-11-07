@@ -2,6 +2,8 @@ import { useEffect, useState, useContext } from 'react';
 import { Link } from 'react-router-dom';
 import { AuthContext } from '../../context/AuthContext';
 import { getCategories, deleteCategory, getCategoryTree } from '../../services/categories';
+import { getProducts } from '../../services/products';
+import DeleteCategoryModal from './DeleteCategoryModal';
 
 const CategoriesPage = () => {
   const [categories, setCategories] = useState([]);
@@ -10,8 +12,12 @@ const CategoriesPage = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const { token } = useContext(AuthContext);
-     const [showFilters, setShowFilters] = useState(false);
+  const [showFilters, setShowFilters] = useState(false);
 
+  // Delete modal states
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [categoryToDelete, setCategoryToDelete] = useState(null);
+  const [productCount, setProductCount] = useState(0);
 
   // Filter states
   const [filters, setFilters] = useState({
@@ -80,23 +86,56 @@ const CategoriesPage = () => {
     }
   };
 
-  const handleDelete = async (id, name) => {
-    if (window.confirm(`Are you sure you want to delete "${name}"? This will also affect products in this category.`)) {
-      try {
-        const response = await deleteCategory(token, id);
-        
-        if (response.success !== false) {
-          if (viewMode === 'tree') {
-            fetchTreeView();
-          } else {
-            fetchCategories();
-          }
-        } else {
-          alert('Failed to delete category: ' + response.message);
+  const handleDeleteClick = async (category) => {
+    setCategoryToDelete(category);
+
+    // Fetch product count for this category
+    try {
+      const response = await getProducts({ category: category._id, limit: 1 });
+      const count = response.pagination?.totalProducts || 0;
+      setProductCount(count);
+    } catch (error) {
+      console.error('Failed to get product count:', error);
+      setProductCount(0);
+    }
+
+    setDeleteModalOpen(true);
+  };
+
+  const handleDeleteConfirm = async (action, newCategoryId) => {
+    try {
+      const response = await deleteCategory(token, categoryToDelete._id, action, newCategoryId);
+
+      if (response.success !== false) {
+        // Show success message
+        let message = `Category "${categoryToDelete.name}" deleted successfully.`;
+
+        if (response.productsDeleted > 0) {
+          message += ` ${response.productsDeleted} product(s) deleted.`;
+        } else if (response.productsReassigned > 0) {
+          message += ` ${response.productsReassigned} product(s) reassigned.`;
+        } else if (response.productsOrphaned > 0) {
+          message += ` ${response.productsOrphaned} product(s) marked for reassignment.`;
         }
-      } catch (error) {
-        alert('Failed to delete category: ' + error.message);
+
+        alert(message);
+
+        // Refresh the category list
+        if (viewMode === 'tree') {
+          fetchTreeView();
+        } else {
+          fetchCategories();
+        }
+
+        // Close modal
+        setDeleteModalOpen(false);
+        setCategoryToDelete(null);
+        setProductCount(0);
+      } else {
+        throw new Error(response.message || 'Failed to delete category');
       }
+    } catch (error) {
+      throw error; // Re-throw to be caught by modal
     }
   };
 
@@ -151,7 +190,7 @@ const CategoriesPage = () => {
               Edit
             </Link>
             <button
-              onClick={() => handleDelete(category._id, category.name)}
+              onClick={() => handleDeleteClick(category)}
               className="text-red-600 hover:text-red-800 font-medium text-sm"
             >
               Delete
@@ -340,7 +379,7 @@ const CategoriesPage = () => {
                           Edit
                         </Link>
                         <button
-                          onClick={() => handleDelete(category._id, category.name)}
+                          onClick={() => handleDeleteClick(category)}
                           className="text-red-600 hover:text-red-800 font-medium"
                         >
                           Delete
@@ -377,6 +416,20 @@ const CategoriesPage = () => {
           Total: {categories.length} categories
         </div>
       )}
+
+      {/* Delete Category Modal */}
+      <DeleteCategoryModal
+        isOpen={deleteModalOpen}
+        onClose={() => {
+          setDeleteModalOpen(false);
+          setCategoryToDelete(null);
+          setProductCount(0);
+        }}
+        onConfirm={handleDeleteConfirm}
+        category={categoryToDelete}
+        productCount={productCount}
+        categories={categories}
+      />
     </div>
   );
 };

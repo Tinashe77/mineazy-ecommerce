@@ -7,12 +7,14 @@ const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif'
 
 const AddProductImages = ({ isOpen, onClose, product, onSuccess }) => {
   const { token } = useContext(AuthContext);
-  const [activeTab, setActiveTab] = useState('upload'); // 'upload' or 'library'
+  const [activeTab, setActiveTab] = useState('upload'); // 'upload', 'library', or 'url'
   const [selectedFiles, setSelectedFiles] = useState([]);
   const [previews, setPreviews] = useState([]);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState(null);
   const [dragActive, setDragActive] = useState(false);
+  const [mode, setMode] = useState('add'); // 'add' or 'replace'
+  const [imageUrl, setImageUrl] = useState('');
 
   // Media library states
   const [mediaLibrary, setMediaLibrary] = useState([]);
@@ -148,7 +150,7 @@ const AddProductImages = ({ isOpen, onClose, product, onSuccess }) => {
   };
 
   const handleUpload = async () => {
-    const totalSelected = selectedFiles.length + selectedExistingImages.length;
+    const totalSelected = selectedFiles.length + selectedExistingImages.length + (imageUrl.trim() ? 1 : 0);
 
     if (totalSelected === 0) {
       setError('Please select at least one image');
@@ -161,21 +163,32 @@ const AddProductImages = ({ isOpen, onClose, product, onSuccess }) => {
     try {
       const formData = new FormData();
 
+      // Append mode (add or replace)
+      if (mode === 'replace') {
+        formData.append('replaceImages', 'true');
+      }
+
       // Append new image files
       selectedFiles.forEach(file => {
         formData.append('images', file);
       });
 
-      // Append existing image URLs
+      // Append existing image URLs from library
       if (selectedExistingImages.length > 0) {
         const existingUrls = selectedExistingImages.map(img => img.url);
         formData.append('existingImageUrls', JSON.stringify(existingUrls));
       }
 
+      // Append external URL if provided
+      if (imageUrl.trim()) {
+        formData.append('externalImageUrl', imageUrl.trim());
+      }
+
       const response = await updateProduct(token, product._id, formData);
 
       if (response.success !== false) {
-        alert(`Successfully added ${totalSelected} image(s) to ${product.name}`);
+        const action = mode === 'replace' ? 'replaced with' : 'added';
+        alert(`Successfully ${action} ${totalSelected} image(s) for ${product.name}`);
         if (onSuccess) {
           onSuccess();
         }
@@ -203,6 +216,8 @@ const AddProductImages = ({ isOpen, onClose, product, onSuccess }) => {
       totalPages: 1,
       hasNext: false
     });
+    setMode('add');
+    setImageUrl('');
     onClose();
   };
 
@@ -239,6 +254,38 @@ const AddProductImages = ({ isOpen, onClose, product, onSuccess }) => {
           </div>
         )}
 
+        {/* Mode Selection (Add or Replace) */}
+        <div className="mb-4">
+          <label className="block text-sm font-medium text-gray-700 mb-2">Mode</label>
+          <div className="flex gap-3">
+            <button
+              onClick={() => setMode('add')}
+              className={`flex-1 px-4 py-2 rounded-lg border-2 transition-colors ${
+                mode === 'add'
+                  ? 'border-green-600 bg-green-50 text-green-700 font-medium'
+                  : 'border-gray-300 bg-white text-gray-700 hover:border-gray-400'
+              }`}
+            >
+              Add Images
+            </button>
+            <button
+              onClick={() => setMode('replace')}
+              className={`flex-1 px-4 py-2 rounded-lg border-2 transition-colors ${
+                mode === 'replace'
+                  ? 'border-orange-600 bg-orange-50 text-orange-700 font-medium'
+                  : 'border-gray-300 bg-white text-gray-700 hover:border-gray-400'
+              }`}
+            >
+              Replace Images
+            </button>
+          </div>
+          {mode === 'replace' && (
+            <p className="text-xs text-orange-600 mt-2">
+              Warning: This will remove all existing images and replace them with the new selection
+            </p>
+          )}
+        </div>
+
         {/* Tab Navigation */}
         <div className="mb-6 border-b border-gray-200">
           <nav className="flex gap-4">
@@ -265,6 +312,19 @@ const AddProductImages = ({ isOpen, onClose, product, onSuccess }) => {
             >
               Select from Library
               {activeTab === 'library' && (
+                <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-indigo-600"></span>
+              )}
+            </button>
+            <button
+              onClick={() => setActiveTab('url')}
+              className={`pb-3 px-1 font-medium text-sm transition-colors relative ${
+                activeTab === 'url'
+                  ? 'text-indigo-600'
+                  : 'text-gray-500 hover:text-gray-700'
+              }`}
+            >
+              Use URL
+              {activeTab === 'url' && (
                 <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-indigo-600"></span>
               )}
             </button>
@@ -443,16 +503,58 @@ const AddProductImages = ({ isOpen, onClose, product, onSuccess }) => {
           </div>
         )}
 
+        {/* URL Tab */}
+        {activeTab === 'url' && (
+          <div className="mb-6">
+            <div className="space-y-3">
+              <label className="block text-sm font-medium text-gray-700">
+                External Image URL
+              </label>
+              <input
+                type="text"
+                value={imageUrl}
+                onChange={(e) => setImageUrl(e.target.value)}
+                placeholder="https://example.com/image.jpg"
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
+              />
+              <p className="text-xs text-gray-500">
+                Enter a direct URL to an image (JPEG, PNG, GIF, WebP, AVIF)
+              </p>
+              {imageUrl.trim() && (
+                <div className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                  <p className="text-xs text-blue-700 mb-2 font-medium">Preview:</p>
+                  <img
+                    src={imageUrl.trim()}
+                    alt="URL Preview"
+                    className="w-full max-w-xs rounded-lg border border-gray-300"
+                    onError={(e) => {
+                      e.target.style.display = 'none';
+                      setError('Invalid image URL or image cannot be loaded');
+                    }}
+                    onLoad={(e) => {
+                      e.target.style.display = 'block';
+                      setError(null);
+                    }}
+                  />
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
         {/* Summary before upload */}
-        {(selectedFiles.length > 0 || selectedExistingImages.length > 0) && (
+        {(selectedFiles.length > 0 || selectedExistingImages.length > 0 || imageUrl.trim()) && (
           <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-lg">
-            <p className="text-sm text-green-800 font-medium">Ready to add:</p>
+            <p className="text-sm text-green-800 font-medium">Ready to {mode === 'replace' ? 'replace with' : 'add'}:</p>
             <ul className="text-sm text-green-700 mt-1 space-y-1">
               {selectedFiles.length > 0 && (
                 <li>• {selectedFiles.length} new image{selectedFiles.length !== 1 ? 's' : ''} to upload</li>
               )}
               {selectedExistingImages.length > 0 && (
                 <li>• {selectedExistingImages.length} existing image{selectedExistingImages.length !== 1 ? 's' : ''} from library</li>
+              )}
+              {imageUrl.trim() && (
+                <li>• 1 image from URL</li>
               )}
             </ul>
           </div>
@@ -498,8 +600,10 @@ const AddProductImages = ({ isOpen, onClose, product, onSuccess }) => {
         <div className="flex gap-3">
           <button
             onClick={handleUpload}
-            disabled={uploading || (selectedFiles.length === 0 && selectedExistingImages.length === 0)}
-            className="flex-1 px-6 py-3 bg-indigo-600 text-white font-medium rounded-lg hover:bg-indigo-700 disabled:bg-gray-400 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+            disabled={uploading || (selectedFiles.length === 0 && selectedExistingImages.length === 0 && !imageUrl.trim())}
+            className={`flex-1 px-6 py-3 text-white font-medium rounded-lg disabled:bg-gray-400 disabled:cursor-not-allowed flex items-center justify-center gap-2 ${
+              mode === 'replace' ? 'bg-orange-600 hover:bg-orange-700' : 'bg-indigo-600 hover:bg-indigo-700'
+            }`}
           >
             {uploading ? (
               <>
@@ -507,14 +611,14 @@ const AddProductImages = ({ isOpen, onClose, product, onSuccess }) => {
                   <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                   <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                 </svg>
-                Adding Images...
+                {mode === 'replace' ? 'Replacing Images...' : 'Adding Images...'}
               </>
             ) : (
               <>
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
                 </svg>
-                Add {selectedFiles.length + selectedExistingImages.length} Image{(selectedFiles.length + selectedExistingImages.length) !== 1 ? 's' : ''}
+                {mode === 'replace' ? 'Replace with' : 'Add'} {selectedFiles.length + selectedExistingImages.length + (imageUrl.trim() ? 1 : 0)} Image{(selectedFiles.length + selectedExistingImages.length + (imageUrl.trim() ? 1 : 0)) !== 1 ? 's' : ''}
               </>
             )}
           </button>

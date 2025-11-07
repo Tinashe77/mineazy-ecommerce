@@ -5,6 +5,8 @@ import { getProducts, deleteProduct, bulkImportProducts, downloadSampleCSV, down
 import { getCategories } from '../../services/categories';
 import BulkImageImport from './BulkImageImport';
 import AddProductImages from './AddProductImages';
+import PlaceholderImageModal from './PlaceholderImageModal';
+import ExportModal from './ExportModal';
 
 const CLOUDINARY_BASE_URL = 'https://res.cloudinary.com/probitymutsambiwa/image/upload/';
 const DEFAULT_PRODUCT_IMAGE = 'https://res.cloudinary.com/probitymutsambiwa/image/upload/v1759822323/mining-equipment/products/lm4r2ksmdutvh1s78v80.jpg';
@@ -86,6 +88,12 @@ const ProductsPage = () => {
   // Add single product images state
   const [showAddImagesModal, setShowAddImagesModal] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState(null);
+
+  // Placeholder image modal state
+  const [showPlaceholderModal, setShowPlaceholderModal] = useState(false);
+
+  // Export modal state
+  const [showExportModal, setShowExportModal] = useState(false);
 
   useEffect(() => {
     fetchCategories();
@@ -388,6 +396,24 @@ const ProductsPage = () => {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
             </svg>
             Bulk Images
+          </button>
+          <button
+            onClick={() => setShowPlaceholderModal(true)}
+            className="px-4 py-2 text-orange-600 bg-white border-2 border-orange-600 rounded-md hover:bg-orange-50 transition-all font-medium flex items-center gap-2"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+            </svg>
+            Placeholder
+          </button>
+          <button
+            onClick={() => setShowExportModal(true)}
+            className="px-4 py-2 text-green-600 bg-white border-2 border-green-600 rounded-md hover:bg-green-50 transition-all font-medium flex items-center gap-2"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+            </svg>
+            Export
           </button>
           <Link
             to="/dashboard/products/new"
@@ -1043,6 +1069,22 @@ LAPTOP001,Dell Laptop,High-performance laptop,1200.00,/images/laptop.jpg</pre>
         onSuccess={() => {
           fetchProducts(pagination.currentPage);
         }}
+      />
+
+      {/* Placeholder Image Modal */}
+      <PlaceholderImageModal
+        isOpen={showPlaceholderModal}
+        onClose={() => setShowPlaceholderModal(false)}
+        onSuccess={() => {
+          fetchProducts(pagination.currentPage);
+        }}
+      />
+
+      {/* Export Modal */}
+      <ExportModal
+        isOpen={showExportModal}
+        onClose={() => setShowExportModal(false)}
+        currentFilters={filters}
       />
     </div>
   );

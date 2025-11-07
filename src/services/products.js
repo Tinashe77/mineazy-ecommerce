@@ -279,3 +279,174 @@ export const bulkUploadImages = async (token, imageFiles, mapping) => {
     return { success: false, message: error.message };
   }
 };
+
+/**
+ * Get products without images
+ * @param {string} token - Authentication token
+ * @returns {Promise<Object>} List of products without images
+ */
+export const getProductsWithoutImages = async (token) => {
+  try {
+    const response = await fetch(`${API_URL}/without-images`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+    });
+    return await handleResponse(response);
+  } catch (error) {
+    return { success: false, message: error.message };
+  }
+};
+
+/**
+ * Upload placeholder image
+ * @param {string} token - Authentication token
+ * @param {File} imageFile - Image file to upload
+ * @returns {Promise<Object>} Upload result with placeholder URL
+ */
+export const uploadPlaceholderImage = async (token, imageFile) => {
+  try {
+    const formData = new FormData();
+    formData.append('image', imageFile);
+
+    const response = await fetch(`${API_URL}/placeholder`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        // NO Content-Type header - browser sets it automatically with boundary
+      },
+      body: formData,
+    });
+
+    return await handleResponse(response);
+  } catch (error) {
+    return { success: false, message: error.message };
+  }
+};
+
+/**
+ * Use existing media library image as placeholder
+ * @param {string} token - Authentication token
+ * @param {string} mediaUrl - URL of existing media in library
+ * @returns {Promise<Object>} Result with placeholder URL
+ */
+export const useExistingMediaAsPlaceholder = async (token, mediaUrl) => {
+  try {
+    const response = await fetch(`${API_URL}/placeholder`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ existingMediaUrl: mediaUrl }),
+    });
+
+    return await handleResponse(response);
+  } catch (error) {
+    return { success: false, message: error.message };
+  }
+};
+
+/**
+ * Use external image URL as placeholder
+ * @param {string} token - Authentication token
+ * @param {string} externalUrl - External image URL
+ * @returns {Promise<Object>} Result with placeholder URL
+ */
+export const useExternalUrlAsPlaceholder = async (token, externalUrl) => {
+  try {
+    const response = await fetch(`${API_URL}/placeholder`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ externalImageUrl: externalUrl }),
+    });
+
+    return await handleResponse(response);
+  } catch (error) {
+    return { success: false, message: error.message };
+  }
+};
+
+/**
+ * Apply placeholder image to all products without images
+ * @param {string} token - Authentication token
+ * @param {string} placeholderUrl - URL of placeholder image
+ * @returns {Promise<Object>} Result with count of updated products
+ */
+export const applyPlaceholderToProducts = async (token, placeholderUrl) => {
+  try {
+    const response = await fetch(`${API_URL}/apply-placeholder`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ placeholderUrl }),
+    });
+
+    return await handleResponse(response);
+  } catch (error) {
+    return { success: false, message: error.message };
+  }
+};
+
+/**
+ * Export products to CSV file
+ * @param {string} token - Authentication token
+ * @param {Object} filters - Export filters
+ * @param {string} filters.category - Filter by category ID
+ * @param {boolean} filters.inStock - Filter by stock availability
+ * @param {boolean} filters.featured - Filter by featured status
+ * @param {boolean} filters.isActive - Filter by active status
+ * @param {number} filters.minPrice - Minimum price filter
+ * @param {number} filters.maxPrice - Maximum price filter
+ * @param {string} filters.fields - Comma-separated list of fields to export
+ * @returns {Promise<Blob>} CSV file blob
+ */
+export const exportProducts = async (token, filters = {}) => {
+  try {
+    // Build query string from filters
+    const params = new URLSearchParams();
+    Object.entries(filters).forEach(([key, value]) => {
+      if (value !== null && value !== undefined && value !== '') {
+        params.append(key, value);
+      }
+    });
+
+    const queryString = params.toString();
+    const url = `${API_URL}/export${queryString ? `?${queryString}` : ''}`;
+
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({ message: 'Export failed' }));
+      throw new Error(errorData.message || 'Export failed');
+    }
+
+    // Get metadata from headers
+    const contentDisposition = response.headers.get('content-disposition');
+    const filename = contentDisposition?.match(/filename="?(.+)"?/i)?.[1] || 'products-export.csv';
+    const totalProducts = response.headers.get('x-total-products');
+
+    const blob = await response.blob();
+
+    // Return blob with metadata
+    return {
+      blob,
+      filename,
+      totalProducts: totalProducts ? parseInt(totalProducts, 10) : 0,
+    };
+  } catch (error) {
+    throw new Error(error.message || 'Failed to export products');
+  }
+};

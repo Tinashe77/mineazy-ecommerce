@@ -108,9 +108,17 @@ export const updateCategory = async (token, id, categoryData) => {
 };
 
 // Protected endpoint - Delete category (Inventory Manager/Super Admin)
-export const deleteCategory = async (token, id) => {
+// action: 'delete' | 'keep' | 'reassign'
+// newCategoryId: Required when action is 'reassign'
+export const deleteCategory = async (token, id, action = 'keep', newCategoryId = null) => {
   try {
-    const response = await fetch(`${API_URL}/${id}`, {
+    let url = `${API_URL}/${id}?action=${action}`;
+
+    if (action === 'reassign' && newCategoryId) {
+      url += `&newCategoryId=${newCategoryId}`;
+    }
+
+    const response = await fetch(url, {
       method: 'DELETE',
       headers: {
         'Authorization': `Bearer ${token}`,
@@ -120,5 +128,20 @@ export const deleteCategory = async (token, id) => {
     return await handleResponse(response);
   } catch (error) {
     return { success: false, message: error.message };
+  }
+};
+
+// Get product count for a category
+export const getCategoryProductCount = async (categoryId) => {
+  try {
+    const response = await fetch(`${API_URL}/${categoryId}/product-count`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+    return await handleResponse(response);
+  } catch (error) {
+    return { success: false, message: error.message, count: 0 };
   }
 };
